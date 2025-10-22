@@ -1,0 +1,27 @@
+/* Reset + box-sizing */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+:root {
+  /* Paleta / Cores */
+  --cor-fundo: #0b0210;
+  --cor-superficie: #13041a;
+  --roxo-900: #2b002e;
+  --roxo-700: #5c007a;
+  --roxo-500: #8a2be2;
+  --texto: #ffffff;
+
+  /* Tipografia / Fontes */
+  --fonte-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --fonte-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+  --tamanho-base: 16px;
+}
+
+/* Reset global básico */
+html, body, #root {
+  height: 100%;
+  margin: 0; 
+  padding: 0; 
+}
+        
