@@ -6,7 +6,6 @@
 :root {
   /* Paleta / Cores */
   --cor-fundo: #0b0210;
-  --cor-superficie: #13041a;
   --roxo-900: #2b002e;
   --roxo-700: #5c007a;
   --roxo-500: #8a2be2;
@@ -24,4 +23,13 @@ html, body, #root {
   margin: 0; 
   padding: 0; 
 }
-        
+
+/* Corpo da página */
+
+/* HERO: pega todo o tamanho do body e utiliza o mesmo degradê de baixo para cima */
+.hero {
+	height: 100%; /* usa o height do body (body tem height:100% no base.css) */
+	min-height: 100vh; /* fallback */
+    background: linear-gradient(to top, var(--roxo-900) 0%, var(--cor-fundo) 100%);
+	color: var(--texto);
+}
