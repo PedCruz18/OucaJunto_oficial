@@ -1,4 +1,4 @@
-# OucaJunto
+# OuçaJunto
 
 Aplicação web para streaming de áudio — versão oficial do projeto.
 
