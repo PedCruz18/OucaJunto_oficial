@@ -6,7 +6,9 @@ const path = require('path');
 
 // Cria a aplicação Express
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
+const HOST = '0.0.0.0';
+const os = require('os');
 
 // Define a pasta 'static' pública de forma única e confiável
 const publicDir = path.join(__dirname, 'public');
@@ -20,7 +22,16 @@ const routes = require('./src/routes/web_routes')(publicDir);
 // diz para o servidor usar as rotas quando a raiz for acessada
 app.use('/', routes);
 
-// Inicia o servidor
-app.listen(PORT, () => {
+// Inicia o servidor escutando em todas as interfaces
+app.listen(PORT, HOST, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
+  // mostra IPs locais para acessar pela rede
+  const nets = os.networkInterfaces();
+  Object.keys(nets).forEach((name) => {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        console.log(`Acesse via rede: http://${net.address}:${PORT}`);
+      }
+    }
+  });
 });
