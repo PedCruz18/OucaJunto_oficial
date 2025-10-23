@@ -294,17 +294,23 @@
 }
 
 .site-footer {
-  position: absolute;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: rgba(255,255,255,0.65);
-  font-size: 12px;
-  letter-spacing: 0.4px;
-  background: transparent;
-  z-index: 2;
-  pointer-events: none;
-  user-select: none;
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.65);
+    font-size: 12px;
+    letter-spacing: 0.4px;
+    background: transparent;
+    z-index: 6;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Remove default blue from links inside the footer */
+.site-footer a {
+    color: inherit;
+    text-decoration: none;
 }
 
 /* === ESTILOS DA SIDEBAR === */
