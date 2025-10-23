@@ -114,6 +114,7 @@ if (listenerChoices && listenerChoices.length) {
     });
 }
 
+// comportamento do botão criar sala
 if (createRoomBtn) {
     createRoomBtn.addEventListener('click', () => {
         const name = document.getElementById('newRoomName')?.value || '';
@@ -133,17 +134,5 @@ if (createRoomBtn) {
 
         // Aqui você integraria com sua API para criar a sala.
         console.log('Criar sala:', { name, pass, num });
-
-        // fechar o painel e restaurar estado (comportamento opcional)
-        if (roomInputBox.classList.contains('expanded')) {
-            // reusar closeExpand definido acima
-            // procura a função no escopo — se não existir, apenas remove a classe
-            try { closeExpand(); } catch (err) { roomInputBox.classList.remove('expanded'); }
-        }
     });
 }
-
-// pequeno estilo de erro via classe (adiciona/remover em JS)
-const style = document.createElement('style');
-style.textContent = '.input-error{ box-shadow: 0 0 0 3px rgba(255,0,0,0.12); }';
-document.head.appendChild(style);
