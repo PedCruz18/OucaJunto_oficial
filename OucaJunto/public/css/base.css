@@ -1,35 +1,124 @@
 /* Reset + box-sizing */
 *, *::before, *::after {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 :root {
-  /* Paleta / Cores */
-  --cor-fundo: #0b0210;
-  --roxo-900: #2b002e;
-  --roxo-700: #5c007a;
-  --roxo-500: #8a2be2;
-  --texto: #ffffff;
+    /* Paleta / Cores */
+    --cor-fundo: #0b0210;
+    --roxo-900: #2b002e;
+    --roxo-700: #5c007a;
+    --roxo-500: #8a2be2;
+    --texto: #ffffff;
 
-  /* Tipografia / Fontes */
-  --fonte-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  --fonte-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
-  --tamanho-base: 16px;
+    /* Tipografia / Fontes */
+    --fonte-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    --fonte-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+    --tamanho-base: 16px;
 }
 
 /* Reset global básico */
 html, body, #root {
-  height: 100%;
-  margin: 0; 
-  padding: 0; 
+    height: 100%;
+    margin: 0; 
+    padding: 0; 
 }
 
-/* Corpo da página */
+/* Corpo da página */ 
 
-/* HERO: pega todo o tamanho do body e utiliza o mesmo degradê de baixo para cima */
 .hero {
-	height: 100%; /* usa o height do body (body tem height:100% no base.css) */
-	min-height: 100vh; /* fallback */
+    /* pega todo o tamanho do body e utiliza o mesmo degradê de baixo para cima */
+    height: 100%;
+
+    /* unidade dinâmica para evitar barra do navegador móvel */
+    min-height: 100dvh;
+
+    /* Degradê de fundo */
     background: linear-gradient(to top, var(--roxo-900) 0%, var(--cor-fundo) 100%);
-	color: var(--texto);
+}
+
+/* Sidebar: estilo padrão (desktop) */
+.sidebar{
+    /* Largura base da sidebar e escala */
+    position: fixed;
+    height: 100dvh;
+    min-height: 100dvh;
+    width: 20%;
+    background: var(--roxo-900);
+    z-index: 4;
+}
+
+.hamburger {
+    position: absolute;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 44px;
+    height: 40px;
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    z-index: 5; /* maior que a sidebar mobile para permitir interações */
+}
+
+/* barras do hambúrguer */
+.hamburger .bar {
+    display: block;
+    width: 100%;
+    height: 3px;
+    background: var(--texto);
+    border-radius: 2px;
+    transition: transform 0.28s ease, opacity 0.2s ease;
+    transform-origin: center;
+}
+
+@media (min-width: 1026px) {
+.hamburger {
+    display: none;
+}
+}
+
+/* mobile + tablet: sidebar como modal off-canvas (até 1024.98px), controlada pela classe .open */
+@media (max-width: 1024.98px) {
+.sidebar {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
+    /* fundo preto semi-transparente */
+    background: rgba(0,0,0,0.6);
+    z-index: 4;
+    /* começa fora da tela embaixo e sobe ao abrir */
+    transform: translateY(100%);
+    transition: transform 0.28s ease;
+    display: block;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* painel interno opcional (conteúdo real da sidebar) — mantém conteúdo com fundo sólido e borda arredondada */
+.sidebar .panel {
+    width: 100%;
+    max-height: 90vh;
+    margin-top: auto; /* faz o painel "grudar" na parte inferior ao subir */
+    background: var(--roxo-900);
+    padding: 1rem;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
+}
+
+/* quando aberto: zera o translate para aparecer (sobem de baixo para cima) */
+.sidebar.open {
+    transform: translateY(0);
+}
+
+.hamburger.open .bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+.hamburger.open .bar:nth-child(2) { opacity: 0; transform: translateX(-10px); }
+.hamburger.open .bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
 }
