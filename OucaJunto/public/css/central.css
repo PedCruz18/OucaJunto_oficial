@@ -21,6 +21,9 @@
   border-radius: 12px;
   padding: 6px;
   align-items: center;
+  overflow: hidden; /* para animações do conteúdo interno */
+  transition: padding 0.28s ease, background 0.28s ease, min-height 0.28s ease;
+  position: relative; /* para posicionar o botão absolutamente à direita */
 }
 
 /* estilo do input para digitar codigo */
@@ -31,8 +34,17 @@
   color: #fff;
   padding: 12px 14px;
   font-size: 16px;
+  /* espaço para o botão absoluto à direita */
+  padding-right: 72px;
   outline: none;
   caret-color: #fff;
+}
+
+/* estilo visual para input desabilitado */
+.room-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.9;
+  display: none;
 }
 
 /* botão de ação "+" */
@@ -48,7 +60,13 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  margin-left: 8px;
+  /* Posicionamento absoluto à direita do container */
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  transition: transform 0.2s ease, font-size 0.2s ease;
 }
 
 /* texto auxiliar abaixo do input */
@@ -60,6 +78,210 @@
   text-transform: uppercase;
   text-align: center;
 }
+
+/* ===== Estado expandido: transforma a caixa em uma box maior ===== */
+.room-input-box.expanded {
+  padding: 20px;
+  background: rgba(255,255,255,0.08);
+  min-height: 260px; /* mais espaço vertical */
+  align-items: flex-start;
+  gap: 0;
+  flex-direction: column;
+}
+
+.room-input-box.expanded .room-join-btn {
+  top: -12px;
+  right: -12px;
+  font-size: 20px;
+  width: 40px;
+  height: 40px;
+  background: rgba(43,0,46,0.95);
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 50%;
+  transform: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.room-input-box.expanded .room-join-btn:hover {
+  background: rgba(92,0,122,0.98);
+  border-color: rgba(123,97,255,0.5);
+  box-shadow: 0 6px 16px rgba(123,97,255,0.25);
+  transform: scale(1.08);
+}
+
+/* Conteúdo que aparece quando expandir (inicialmente oculto) */
+.expanded-content {
+  width: 100%;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.32s ease, opacity 0.24s ease;
+  padding: 0;
+}
+
+.room-input-box.expanded .expanded-content {
+  max-height: 280px;
+  opacity: 1;
+  padding-top: 0;
+}
+
+.expanded-text {
+  margin: 0;
+  color: rgba(255,255,255,0.85);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* === estilos do formulário dentro da área expandida === */
+.create-room-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  padding-right: 0; /* remove padding já que botão está fora */
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  color: rgba(255,255,255,0.75);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.2);
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: rgba(123,97,255,0.5);
+  background: rgba(0,0,0,0.3);
+}
+
+.form-input::placeholder {
+  color: rgba(255,255,255,0.35);
+  font-size: 14px;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.listeners-row { 
+  margin-top: 4px;
+}
+
+.listeners-label {
+  color: rgba(255,255,255,0.75);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+.listeners-options {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.listener-choice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.8);
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 15px;
+  transition: all 0.2s ease;
+  min-width: 56px;
+}
+
+.listener-choice:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(123,97,255,0.3);
+}
+
+.listener-choice[aria-pressed="true"] {
+  background: linear-gradient(135deg, #7b61ff 0%, #9b7bff 100%);
+  border-color: #7b61ff;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(123,97,255,0.35);
+  transform: translateY(-1px);
+}
+
+.expanded-create-btn {
+  background: linear-gradient(135deg, #7b61ff 0%, #9b7bff 100%);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(123,97,255,0.25);
+  text-transform: uppercase;
+}
+
+.expanded-create-btn:hover {
+  box-shadow: 0 6px 20px rgba(123,97,255,0.4);
+  transform: translateY(-2px);
+}
+
+.expanded-create-btn:active {
+  transform: translateY(0);
+}
+
+/* Adaptações para mobile: reduzir gaps e tamanhos */
+@media (max-width: 480px) {
+  .create-room-form { gap: 12px; padding-right: 0; }
+  .listeners-options { gap: 6px; flex-wrap: wrap; }
+  .listener-choice { padding: 8px 12px; font-size: 14px; min-width: 48px; }
+  .expanded-create-btn { padding: 10px 18px; font-size: 13px; width: 100%; margin-top: 4px; }
+  .room-input-box.expanded { min-height: 300px; }
+  .room-input-box.expanded .expanded-content { max-height: 320px; }
+  .room-input-box.expanded .room-join-btn { 
+    top: -10px; 
+    right: -10px; 
+    width: 36px; 
+    height: 36px; 
+    font-size: 18px;
+  }
+}
+
+/* Esconde o placeholder visualmente quando o box estiver expandido (fallback) */
+.room-input-box.expanded .room-input::placeholder { color: transparent; }
 
 .room-image {
   display: block;
