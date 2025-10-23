@@ -84,3 +84,93 @@
   pointer-events: none;
   user-select: none;
 }
+
+/* === ESTILOS DA SIDEBAR === */
+.sidebar .panel {
+  position: relative;
+  height: 100%;
+  min-height: 100%;
+}
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+  justify-content: flex-start; /* conteúdos no topo */
+  align-items: center;
+  gap: 12px; /* espaço entre topo e conteúdo do meio (reduzido) */
+  padding: 40px 20px;
+  text-align: center;
+  position: relative; /* base para ancorar o rodapé */
+}
+
+.connection-status {
+  color: rgba(255,255,255,0.65);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-top: 20px;
+}
+
+.session-id-display {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  padding: 8px 16px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  min-width: 140px;
+}
+
+.session-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: absolute;  /* fixa no rodapé da sidebar */
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 16px;        /* espaçamento do final da sidebar */
+  width: 100%;
+}
+
+.session-label {
+  color: rgba(255,255,255,0.65);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.session-id-text {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  font-family: var(--fonte-mono, monospace);
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 1024.98px) {
+  .sidebar-content {
+    padding: 30px 16px;
+    height: 100%;  
+    min-height: 100%;
+  }
+  
+  .connection-status {
+    font-size: 13px;
+  }
+  
+  .session-id-display {
+    font-size: 15px;
+    padding: 10px 14px;
+  }
+  
+  .session-id-text {
+    font-size: 13px;
+  }
+}

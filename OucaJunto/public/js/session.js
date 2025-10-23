@@ -12,6 +12,11 @@
         try { stored = JSON.parse(storedRaw); } catch (e) { stored = null; }
       }
 
+      // se já houver sessão armazenada, exibe o ID imediatamente no UI
+      if (stored && stored.id) {
+        updateSidebarSessionId(stored.id);
+      }
+
       // constrói URL de requisição
       let url = '/api/session-debug';
       if (stored && stored.id && stored.createdAt) {
@@ -31,6 +36,9 @@
       // Esperamos apenas { id, createdAt } do backend; salvamos no localStorage como JSON
       if (json && json.id && json.createdAt) {
         localStorage.setItem(KEY, JSON.stringify({ id: json.id, createdAt: json.createdAt }));
+        
+        // Atualiza o ID na sidebar
+        updateSidebarSessionId(json.id);
       }
 
       // imprimir apenas a resposta JSON 
@@ -38,6 +46,14 @@
 
     } catch (err) {
       console.error('erro na sessão:', err);
+    }
+  }
+
+  // função para atualizar o ID da sessão na sidebar
+  function updateSidebarSessionId(sessionId) {
+    const sessionIdText = document.getElementById('sessionIdText');
+    if (sessionIdText) {
+      sessionIdText.textContent = sessionId;
     }
   }
 
