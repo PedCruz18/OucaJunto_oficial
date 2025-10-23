@@ -4,7 +4,7 @@ const express = require('express');
 // Cria um roteador Express
 const router = express.Router();
 
-// exporta uma função que recebe publicDir (arquivos estáticos usam o publicDir)
+// exporta uma função que recebe publicDir do server.js
 module.exports = (publicDir) => {
 
   // responde com o arquivo templates/central.html usando o publicDir recebido

@@ -1,30 +1,65 @@
-// Importa o Express
+// ============================
+//        DEPENDÊNCIAS
+// ============================
 const express = require('express');
-
-// Importa módulo nativo do Node para lidar com caminhos
 const path = require('path');
+const os = require('os');
+const sessionApi = require('./src/apis/session_api');
+const webRoutes = require('./src/routes/web_routes');      
 
-// Cria a aplicação Express
+// ============================
+//        CONFIGURAÇÕES
+// ============================
 const app = express();
 const PORT = process.env.PORT || 5000;
 const HOST = '0.0.0.0';
-const os = require('os');
 
-// Define a pasta 'static' pública de forma única e confiável
+// pasta pública 
 const publicDir = path.join(__dirname, 'public');
 
-// Middleware: Serve arquivos estáticos da pasta 'public'
+// ============================
+//        MIDDLEWARES
+// ============================
+
+// Serve arquivos estáticos da pasta 'public'
 app.use(express.static(publicDir));
 
-// Usa as rotas definidas (agora o módulo exporta uma função que recebe publicDir)
-const routes = require('./src/routes/web_routes')(publicDir);
+// ============================
+//        ROTAS
+// ============================
 
-// diz para o servidor usar as rotas quando a raiz for acessada
-app.use('/', routes);
+// Rota que gera um novo session
+app.get('/api/session-debug', (req, res) => {
+  try {
+    // tenta receber id e createdAt enviados pelo cliente via query ou header
+    const suppliedId = req.query.id || req.get('X-Ouca-Session-Id');
+    const suppliedCreated = req.query.createdAt || req.get('X-Ouca-Session-Created');
 
-// Inicia o servidor escutando em todas as interfaces
+    // validação simples: existir e ter o comprimento esperado; se both presentes, ecoamos
+    if (typeof suppliedId === 'string' && suppliedId.length === sessionApi.ID_LEN && suppliedCreated) {
+      // formatar createdAt para padrão BR antes de retornar
+      const createdBR = sessionApi.formatBR(suppliedCreated) || suppliedCreated;
+      return res.json({ id: suppliedId, createdAt: createdBR });
+    }
+
+    // caso não haja id válido+createdAt, gera novo
+    const s = sessionApi.newSession();
+    return res.json(s);
+  } catch (e) {
+    console.error('failed to generate session debug', e);
+    return res.status(500).json({ error: 'failed to generate session' });
+  }
+});
+
+// Rotas do site (exporta publicDir para servir arquivos estáticos)
+app.use('/', webRoutes(publicDir));
+
+// ============================
+//        INICIALIZAÇÃO DO SERVIDOR
+// ============================
 app.listen(PORT, HOST, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
+
   // mostra IPs locais para acessar pela rede
   const nets = os.networkInterfaces();
   Object.keys(nets).forEach((name) => {

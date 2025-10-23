@@ -2,7 +2,7 @@
 const btn = document.getElementById('hamburgerBtn');
 const sidebar = document.getElementById('sidebar');
 
-/* fallback: evita erro quando elementos não existem no DOM */
+// fallback: evita erro quando elementos não existem no DOM
 if (!btn || !sidebar) {
     console.warn('hamburgerBtn ou sidebar não encontrados — script de toggle abortado.');
 } else {

@@ -1,0 +1,1 @@
+// aqui ira ficar a logica de gerenciamento de salas do sistema
