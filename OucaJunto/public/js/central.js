@@ -1,297 +1,430 @@
-// define os elementos do DOM a serem utilizados
-const btn = document.getElementById('hamburgerBtn');
-const sidebar = document.getElementById('sidebar');
+/**
+ * ==============================================
+ * 🛠️ FUNÇÕES AUXILIARES PARA CONTAINERS
+ * ==============================================
+ */
+const ContainerUtils = {
+    /**
+     * Abre um container aplicando classes CSS e configurando acessibilidade
+     * @param {HTMLElement} container - Elemento do container
+     * @param {HTMLElement} trigger - Elemento que dispara a ação (botão)
+     * @param {Object} options - Opções de configuração
+     */
+    openContainer(container, trigger, options = {}) {
+        const {
+            containerClass = 'open',
+            triggerClass = 'open',
+            triggerLabel = 'Fechar',
+            triggerContent = null,
+            display = null,
+            tabIndex = null
+        } = options;
 
-// fallback: evita erro quando elementos não existem no DOM
-if (!btn || !sidebar) {
-    console.warn('hamburgerBtn ou sidebar não encontrados — script de toggle abortado.');
-} else {
+        container.classList.add(containerClass);
+        container.setAttribute('aria-hidden', 'false');
+        
+        if (trigger) {
+            if (triggerClass) trigger.classList.add(triggerClass);
+            trigger.setAttribute('aria-expanded', 'true');
+            if (triggerLabel) trigger.setAttribute('aria-label', triggerLabel);
+            if (triggerContent !== null) trigger.textContent = triggerContent;
+        }
 
-    // Acessibilidade inicial
-    btn.setAttribute('aria-controls', 'sidebar');
-    btn.setAttribute('aria-expanded', 'false');
-    sidebar.setAttribute('aria-hidden', 'true');
-    sidebar.tabIndex = -1;
+        if (display) container.style.display = display;
+        if (tabIndex !== null) container.tabIndex = tabIndex;
+    },
 
-    // abre o sidebar
+    /**
+     * Fecha um container removendo classes CSS e configurando acessibilidade
+     * @param {HTMLElement} container - Elemento do container
+     * @param {HTMLElement} trigger - Elemento que dispara a ação (botão)
+     * @param {Object} options - Opções de configuração
+     */
+    closeContainer(container, trigger, options = {}) {
+        const {
+            containerClass = 'open',
+            triggerClass = 'open',
+            triggerLabel = 'Abrir',
+            triggerContent = null,
+            display = null,
+            tabIndex = null,
+            // seletor opcional para onde mover o foco caso o elemento ativo esteja dentro do container
+            fallbackFocusSelector = '#mainContent'
+        } = options;
+
+        // --- Segurança de foco: se o elemento ativo estiver dentro do container,
+        // movemos o foco para um elemento de fallback antes de esconder o container.
+        try {
+            const active = document.activeElement;
+            if (active && container && container.contains(active)) {
+                let fallback = null;
+                if (fallbackFocusSelector) fallback = document.querySelector(fallbackFocusSelector);
+
+                // Se não encontrou fallback, usar body como último recurso (apenas blur)
+                if (fallback) {
+                    const prevTab = fallback.getAttribute && fallback.getAttribute('tabindex');
+                    const needRemoveTab = prevTab === null;
+                    // Garantir que o fallback seja focável
+                    fallback.setAttribute('tabindex', '-1');
+                    fallback.focus();
+                    // se não existia tabindex antes, removemos para não poluir DOM
+                    if (needRemoveTab) fallback.removeAttribute('tabindex');
+                } else if (active && typeof active.blur === 'function') {
+                    active.blur();
+                }
+            }
+        } catch (err) {
+            // se algo falhar, não interromper a execução - apenas prosseguir
+            // console.debug('ContainerUtils: foco fallback falhou', err);
+        }
+
+        container.classList.remove(containerClass);
+        container.setAttribute('aria-hidden', 'true');
+
+        if (trigger) {
+            if (triggerClass) trigger.classList.remove(triggerClass);
+            trigger.setAttribute('aria-expanded', 'false');
+            if (triggerLabel) trigger.setAttribute('aria-label', triggerLabel);
+            if (triggerContent !== null) trigger.textContent = triggerContent;
+        }
+
+        if (display) container.style.display = display;
+        if (tabIndex !== null) container.tabIndex = tabIndex;
+    },
+
+    /**
+     * Alterna estado de um container (aberto/fechado)
+     * @param {HTMLElement} container - Elemento do container
+     * @param {HTMLElement} trigger - Elemento que dispara a ação (botão)
+     * @param {Object} openOptions - Opções para abertura
+     * @param {Object} closeOptions - Opções para fechamento
+     */
+    toggleContainer(container, trigger, openOptions = {}, closeOptions = {}) {
+        const containerClass = openOptions.containerClass || 'open';
+        const isOpen = container.classList.contains(containerClass);
+        
+        if (isOpen) {
+            this.closeContainer(container, trigger, closeOptions);
+        } else {
+            this.openContainer(container, trigger, openOptions);
+        }
+        
+        return !isOpen;
+    },
+
+    /**
+     * Configura acessibilidade inicial de um container
+     * @param {HTMLElement} container - Elemento do container
+     * @param {HTMLElement} trigger - Elemento que dispara a ação (botão)
+     * @param {Object} options - Opções de configuração
+     */
+    setupAccessibility(container, trigger, options = {}) {
+        const {
+            containerId = container.id,
+            initialExpanded = false,
+            initialLabel = 'Abrir',
+            tabIndex = -1
+        } = options;
+
+        if (trigger && containerId) {
+            trigger.setAttribute('aria-controls', containerId);
+            trigger.setAttribute('aria-expanded', String(initialExpanded));
+            trigger.setAttribute('aria-label', initialLabel);
+        }
+
+        container.setAttribute('aria-hidden', String(!initialExpanded));
+        if (tabIndex !== null) container.tabIndex = tabIndex;
+    }
+};
+
+/**
+ * ==============================================
+ * 🧭 SIDEBAR TOGGLE (hamburger menu)
+ * ==============================================
+ */
+(() => {
+    const btn = document.getElementById('hamburgerBtn');
+    const sidebar = document.getElementById('sidebar');
+
+    if (!btn || !sidebar) {
+        console.warn('[Sidebar] Elementos não encontrados. Script abortado.');
+        return;
+    }
+
+    // --- Configuração inicial de acessibilidade
+    ContainerUtils.setupAccessibility(sidebar, btn, {
+        containerId: 'sidebar',
+        initialExpanded: false,
+        initialLabel: 'Abrir menu',
+        tabIndex: -1
+    });
+
+    // --- Função de toggle usando utility
     const toggleSidebar = () => {
-        const isOpen = sidebar.classList.toggle('open');
-        btn.classList.toggle('open', isOpen);
-        btn.setAttribute('aria-expanded', String(isOpen));
-        sidebar.setAttribute('aria-hidden', String(!isOpen));
+        return ContainerUtils.toggleContainer(
+            sidebar, 
+            btn,
+            { // Opções para abrir
+                containerClass: 'open',
+                triggerClass: 'open',
+                triggerLabel: 'Fechar menu'
+            },
+            { // Opções para fechar
+                containerClass: 'open',
+                triggerClass: 'open',
+                triggerLabel: 'Abrir menu'
+            }
+        );
     };
 
-    // clique no botão hambuguer abre/fecha
+    // --- Evento principal
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
         toggleSidebar();
     });
+})();
 
-}
 
-// --- Toggle de expansão do input (botão + -> X) ---
-const joinBtn = document.getElementById('joinBtn');
-const roomInputBox = document.querySelector('.room-input-box');
-const roomInput = document.getElementById('roomCode');
-const expandedContent = document.getElementById('expandedContent');
+/**
+ * ==============================================
+ * 💬 ROOM JOIN / EXPAND INPUT AREA
+ * ==============================================
+ */
+(() => {
+    const joinBtn = document.getElementById('joinBtn');
+    const roomInputBox = document.querySelector('.room-input-box');
+    const roomInput = document.getElementById('roomCode');
+    const expandedContent = document.getElementById('expandedContent');
+    const roomHelp = document.getElementById('roomHelp');
 
-if (!joinBtn || !roomInputBox || !roomInput) {
-    console.warn('joinBtn, roomInputBox ou roomInput não encontrados — comportamento de expansão não inicializado.');
-} else {
+    if (!joinBtn || !roomInputBox || !roomInput) {
+        console.warn('[RoomJoin] Elementos não encontrados. Script abortado.');
+        return;
+    }
 
-    // Acessibilidade inicial
-    joinBtn.setAttribute('aria-expanded', 'false');
+    const RIGHT_ARROW_SVG = `
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">
+            <path d="M5 12h14M13 6l6 6-6 6" 
+                  stroke="currentColor" stroke-width="2" 
+                  stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+    `;
 
+    // --- Configuração inicial de acessibilidade
+    ContainerUtils.setupAccessibility(roomInputBox, joinBtn, {
+        initialExpanded: false,
+        initialLabel: 'Entrar na sala'
+    });
+
+    /** 🔓 Expande o campo de entrada */
     const openExpand = () => {
-        roomInputBox.classList.add('expanded');
-        joinBtn.setAttribute('aria-expanded', 'true');
-        // guarda e remove placeholder para que não apareça
-        roomInput.dataset._placeholder = roomInput.getAttribute('placeholder') || '';
+        ContainerUtils.openContainer(roomInputBox, joinBtn, {
+            containerClass: 'expanded',
+            triggerClass: null, // Não usar classe no trigger
+            triggerLabel: 'Fechar',
+            triggerContent: '✕'
+        });
+
+        expandedContent?.setAttribute('aria-hidden', 'false');
+
+        // Configurações específicas do input
+        roomInput.dataset._placeholder = roomInput.placeholder || '';
         roomInput.removeAttribute('placeholder');
-        // muda símbolo para X
-        joinBtn.textContent = '✕';
-        joinBtn.setAttribute('aria-label', 'Fechar');
-        if (expandedContent) expandedContent.setAttribute('aria-hidden', 'false');
-        // torna o input não editável enquanto a box está expandida
         roomInput.disabled = true;
         roomInput.setAttribute('aria-disabled', 'true');
-        // não focar o input desabilitado — manter foco no botão por acessibilidade
+
         joinBtn.focus();
     };
 
+    /** 🔒 Fecha o campo expandido */
     const closeExpand = () => {
-        roomInputBox.classList.remove('expanded');
-        joinBtn.setAttribute('aria-expanded', 'false');
-        // restaura placeholder
-        const ph = roomInput.dataset._placeholder || '';
-        if (ph) roomInput.setAttribute('placeholder', ph);
-        // reabilita o input para digitação
+        ContainerUtils.closeContainer(roomInputBox, joinBtn, {
+            containerClass: 'expanded',
+            triggerClass: null, // Não usar classe no trigger
+            triggerLabel: 'Entrar na sala',
+            triggerContent: '+'
+        });
+
+        expandedContent?.setAttribute('aria-hidden', 'true');
+
+        // Restaurar configurações do input
+        const placeholder = roomInput.dataset._placeholder || '';
+        if (placeholder) roomInput.placeholder = placeholder;
+
         roomInput.disabled = false;
         roomInput.removeAttribute('aria-disabled');
-        joinBtn.textContent = '+';
-        joinBtn.setAttribute('aria-label', 'Entrar na sala');
-        if (expandedContent) expandedContent.setAttribute('aria-hidden', 'true');
     };
 
-    const toggleExpand = () => {
-        if (roomInputBox.classList.contains('expanded')) closeExpand();
-        else openExpand();
-    };
+    /** ⏳ Oculta input e mostra "carregando" */
+    const showLoadingState = () => {
+        ContainerUtils.closeContainer(roomInputBox, joinBtn, {
+            containerClass: 'expanded',
+            triggerClass: null,
+            triggerLabel: 'Entrar na sala',
+            triggerContent: '+',
+            display: 'none'
+        });
 
-    // ícone SVG para seta direita (usado quando há texto no input)
-    const RIGHT_ARROW_SVG = '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;display:block"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
+        joinBtn.disabled = true;
+        expandedContent?.setAttribute('aria-hidden', 'true');
 
-    // Reutilizável: oculta a caixa de input e mostra estado de carregamento
-    function hideRoomInputAndShowLoading() {
-        // fecha a expansão se estiver aberta
-        if (roomInputBox) {
-            roomInputBox.classList.remove('expanded');
-            // oculta todo o container da entrada de sala
-            roomInputBox.style.display = 'none';
-            roomInputBox.setAttribute('aria-hidden', 'true');
-        }
+        // Restaurar input para estado normal
+        roomInput.disabled = false;
+        roomInput.removeAttribute('aria-disabled');
+        if (roomInput.dataset._placeholder)
+            roomInput.placeholder = roomInput.dataset._placeholder;
 
-        // restaura/botão e conteúdo expandido
-        if (joinBtn) {
-            joinBtn.setAttribute('aria-expanded', 'false');
-            joinBtn.textContent = '+';
-            joinBtn.setAttribute('aria-label', 'Entrar na sala');
-            joinBtn.disabled = true;
-        }
-
-        if (expandedContent) expandedContent.setAttribute('aria-hidden', 'true');
-
-        // restaura placeholder do input caso tenha sido guardado
-        if (roomInput) {
-            roomInput.disabled = false;
-            roomInput.removeAttribute('aria-disabled');
-            const ph = roomInput.dataset._placeholder || '';
-            if (ph) roomInput.setAttribute('placeholder', ph);
-        }
-
-        // altera a ajuda/estado para carregar
-        const roomHelp = document.getElementById('roomHelp');
         if (roomHelp) roomHelp.textContent = 'Carregando...';
-    }
+    };
 
+    // --- Eventos principais
     joinBtn.addEventListener('click', (e) => {
         e.stopPropagation();
 
-        // se a caixa estiver expandida, apenas fecha/abre (comportamento atual)
+        const value = roomInput.value.trim();
+
         if (roomInputBox.classList.contains('expanded')) {
-            toggleExpand();
+            closeExpand();
             return;
         }
 
-        // se não estiver expandida: se houver texto no input, interpretar como "conectar/ir"
-        const val = roomInput?.value?.trim() || '';
-        if (val) {
-            // UX local: ocultar e mostrar carregando
-            hideRoomInputAndShowLoading();
-            console.log('Conectar/ir para sala:', val);
-            // aqui você pode iniciar a navegação/consulta para entrar na sala
-            return;
+        if (value) {
+            showLoadingState();
+            console.log('[RoomJoin] Conectar à sala:', value);
+        } else {
+            openExpand();
         }
-
-        // caso contrário, abre a área expandida
-        toggleExpand();
     });
 
-    // escuta quando usuário digita no input — muda o botão para setinha quando tiver texto
-    roomInput.addEventListener('input', (e) => {
+    // --- Atualiza ícone conforme texto
+    roomInput.addEventListener('input', () => {
         const hasText = roomInput.value.trim().length > 0;
+
         if (hasText) {
-            // usar SVG inline em vez de caractere
             joinBtn.innerHTML = RIGHT_ARROW_SVG;
             joinBtn.setAttribute('aria-label', 'Conectar');
-            joinBtn.setAttribute('data-icon', 'arrow');
-        } else {
-            // se estiver na vista padrão sem expandir, mostra '+'; se estiver expandido, X já é tratado por openExpand
-            if (!roomInputBox.classList.contains('expanded')) {
-                joinBtn.textContent = '+';
-                joinBtn.setAttribute('aria-label', 'Entrar na sala');
-                joinBtn.removeAttribute('data-icon');
-            }
+            joinBtn.dataset.icon = 'arrow';
+        } else if (!roomInputBox.classList.contains('expanded')) {
+            joinBtn.textContent = '+';
+            joinBtn.setAttribute('aria-label', 'Entrar na sala');
+            joinBtn.removeAttribute('data-icon');
         }
     });
 
-    // Enter no input: comporta-se como clicar no botão (quando não expandido)
+    // --- Enter = Conectar / expandir
     roomInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            // se estiver expandido, não interferir (submit do form é separado)
-            if (roomInputBox.classList.contains('expanded')) return;
-            const val = roomInput.value.trim();
-            if (val) {
-                hideRoomInputAndShowLoading();
-                console.log('Conectar/ir para sala (enter):', val);
-            } else {
-                // se vazio, abre a expansão para criar sala
-                toggleExpand();
-            }
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+
+        const value = roomInput.value.trim();
+
+        if (roomInputBox.classList.contains('expanded')) return;
+
+        if (value) {
+            showLoadingState();
+            console.log('[RoomJoin] Enter: conectar à sala', value);
+        } else {
+            openExpand();
         }
     });
 
-    // fechar ao clicar fora da box expandida
-    document.addEventListener('click', (e) => {
-        if (roomInputBox.classList.contains('expanded') && !roomInputBox.contains(e.target)) {
-            closeExpand();
+})();
+
+
+/**
+ * ==============================================
+ * 🏗️ CREATE ROOM FORM (ouvintes + validações)
+ * ==============================================
+ */
+(() => {
+    const listenerChoices = document.querySelectorAll('.listener-choice');
+    const createRoomBtn = document.getElementById('createRoomBtn');
+    const roomInputBox = document.querySelector('.room-input-box');
+    const joinBtn = document.getElementById('joinBtn');
+    const expandedContent = document.getElementById('expandedContent');
+    const roomInput = document.getElementById('roomCode');
+    const roomHelp = document.getElementById('roomHelp');
+
+    const MIN_LISTENERS = 1;
+
+    /**
+     * Adiciona classe de erro temporariamente a um elemento
+     * @param {HTMLElement} element - Elemento para adicionar erro
+     * @param {number} duration - Duração em ms (padrão: 1200)
+     */
+    const showTemporaryError = (element, duration = 1200) => {
+        if (!element) return;
+        element.classList.add('input-error');
+        setTimeout(() => element.classList.remove('input-error'), duration);
+    };
+
+    /**
+     * Reseta o estado da interface após criar sala
+     */
+    const resetToInitialState = () => {
+        // Usar utility para fechar container
+        ContainerUtils.closeContainer(roomInputBox, joinBtn, {
+            containerClass: 'expanded',
+            triggerClass: null,
+            triggerLabel: 'Entrar na sala',
+            triggerContent: '+',
+            display: 'none'
+        });
+
+        expandedContent?.setAttribute('aria-hidden', 'true');
+
+        if (roomInput) {
+            roomInput.disabled = false;
+            roomInput.removeAttribute('aria-disabled');
+            const placeholder = roomInput.dataset._placeholder || '';
+            if (placeholder) roomInput.placeholder = placeholder;
         }
-    });
 
-    // ESC fecha a expansão — escuta em nível de documento para funcionar mesmo com input desabilitado
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' || e.key === 'Esc') {
-            if (roomInputBox.classList.contains('expanded')) closeExpand();
-        }
-    });
+        createRoomBtn.disabled = true;
+        if (roomHelp) roomHelp.textContent = 'Carregando...';
+    };
 
-}
-
-// === comportamento do formulário expandido (seleção de ouvintes + criar) ===
-const listenerChoices = document.querySelectorAll('.listener-choice');
-const createRoomBtn = document.getElementById('createRoomBtn');
-
-// mínimo de ouvintes exigido para criar a sala.
-// Altere esse valor conforme a regra do seu app.
-const MIN_LISTENERS = 1;
-
-if (listenerChoices && listenerChoices.length) {
+    // --- Escolha de ouvintes
     listenerChoices.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            // desmarca todos
+        btn.addEventListener('click', () => {
             listenerChoices.forEach(b => b.setAttribute('aria-pressed', 'false'));
-            // marca o selecionado
             btn.setAttribute('aria-pressed', 'true');
 
-            // ao selecionar, limpa qualquer erro de validação previamente mostrado
-            btn.removeAttribute('aria-invalid');
             const container = document.querySelector('.listener-choices') || btn.parentElement;
-            if (container) container.classList.remove('input-error');
+            container?.classList.remove('input-error');
+            btn.removeAttribute('aria-invalid');
         });
     });
-}
 
-// comportamento do botão criar sala
-if (createRoomBtn) {
-    createRoomBtn.addEventListener('click', () => {
-        const name = document.getElementById('newRoomName')?.value || '';
+    // --- Criar sala
+    createRoomBtn?.addEventListener('click', () => {
+        const name = document.getElementById('newRoomName')?.value.trim() || '';
         const pass = document.getElementById('newRoomPass')?.value || '';
         const selected = document.querySelector('.listener-choice[aria-pressed="true"]');
         const num = selected ? Number(selected.dataset.value) : null;
 
-        // validação mínima do nome
-        if (!name.trim()) {
-            const fld = document.getElementById('newRoomName');
-            if (fld) {
-                fld.classList.add('input-error');
-                setTimeout(() => fld.classList.remove('input-error'), 1200);
-                fld.focus();
-            }
+        // Validações
+        if (!name) {
+            const field = document.getElementById('newRoomName');
+            showTemporaryError(field);
+            field?.focus();
             return;
         }
 
-        // validação mínima de ouvintes: precisa ter uma opção selecionada e o valor numérico >= MIN_LISTENERS
         if (!selected || isNaN(num) || num < MIN_LISTENERS) {
-            const container = document.querySelector('.listener-choices') || (listenerChoices[0] && listenerChoices[0].parentElement);
-
-            // visual feedback
-            if (container) {
-                container.classList.add('input-error');
-                setTimeout(() => container.classList.remove('input-error'), 1200);
-            }
-
-            // marcar aria-invalid no elemento selecionado (se existir) para acessibilidade, ou focar o primeiro botão
-            if (selected) {
-                selected.setAttribute('aria-invalid', 'true');
-                selected.focus();
-            } else if (listenerChoices && listenerChoices.length) {
-                listenerChoices[0].focus();
-            } else {
-                // fallback
-                alert(`Por favor escolha pelo menos ${MIN_LISTENERS} ouvinte(s).`);
-            }
-
+            const container = document.querySelector('.listener-choices') || selected?.parentElement;
+            showTemporaryError(container);
+            selected?.setAttribute('aria-invalid', 'true');
+            (selected || listenerChoices[0])?.focus();
             return;
         }
 
-        // Aqui você integraria com sua API para criar a sala.
-        console.log('Criar sala:', { name, pass, num });
+        console.log('[CreateRoom] Criar sala:', { name, pass, num });
 
-        // --- UX: fechar/ocultar formulário e indicar carregamento ---
-        // fecha a expansão se estiver aberta
-        if (roomInputBox) {
-            roomInputBox.classList.remove('expanded');
-            // oculta todo o container da entrada de sala
-            roomInputBox.style.display = 'none';
-            roomInputBox.setAttribute('aria-hidden', 'true');
-        }
+        // Reset da interface usando função auxiliar
+        resetToInitialState();
 
-        // restaura/botão e conteúdo expandido
-        if (joinBtn) {
-            joinBtn.setAttribute('aria-expanded', 'false');
-            joinBtn.textContent = '+';
-            joinBtn.setAttribute('aria-label', 'Entrar na sala');
-        }
-
-        if (expandedContent) expandedContent.setAttribute('aria-hidden', 'true');
-
-        // restaura placeholder do input caso tenha sido guardado
-        if (roomInput) {
-            roomInput.disabled = false;
-            roomInput.removeAttribute('aria-disabled');
-            const ph = roomInput.dataset._placeholder || '';
-            if (ph) roomInput.setAttribute('placeholder', ph);
-        }
-
-        // desabilita o botão criar para evitar cliques duplicados
-        createRoomBtn.disabled = true;
-
-        // altera a ajuda/estado para carregar
-        const roomHelp = document.getElementById('roomHelp');
-        if (roomHelp) roomHelp.textContent = 'Carregando..';
-
-        // aqui você chamaria sua API async; ex:
-        // fetch('/api/rooms', { method: 'POST', body: JSON.stringify({ name, pass, num }) })...
+        // Exemplo de integração futura:
+        // await fetch('/api/rooms', { method: 'POST', body: JSON.stringify({ name, pass, num }) })
     });
-}
+})();
