@@ -13,10 +13,8 @@ function genId() {
 	return Array.from(crypto.randomBytes(ID_LEN)).map(b => CHARSET[b % CHARSET.length]).join('');
 }
 
-/**
- * Cria uma sala e retorna o objeto criado.
- * Dados aceitos: { name, pass, num, ownerId }
- */
+// funções de sala -------------------------------------------------------
+
 function createRoom({ name, pass = '', num = 1, ownerId = null } = {}) {
 	if (!name) throw new Error('room name is required');
 
@@ -37,14 +35,12 @@ function createRoom({ name, pass = '', num = 1, ownerId = null } = {}) {
 
 	// Se for informado um ownerId, adicionar esse owner ao array de players
 	// assim a sala já começa com 1 usuário (o dono). Usamos somente o id
-	// aqui para manter a estrutura simples; se futuramente for preciso
-	// armazenar um objeto, podemos mudar para { id: ownerId, role: 'owner' }.
 	if (ownerId) {
 		room.players.push(ownerId);
 	}
 
 	rooms.set(id, room);
-	// log mais detalhado: inclui id e quantidade de usuários (players.length)
+	// log de backend mais detalhado: inclui id e quantidade de usuários (players.length)
 	console.log(`[room_system] createRoom id=${id} name="${room.name}" num=${room.num} owner=${room.ownerId} users=${room.players.length}`);
 	return room;
 }
