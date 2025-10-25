@@ -5,7 +5,8 @@ const express = require('express');
 const path = require('path');
 const os = require('os');
 const sessionApi = require('./src/apis/session_api');
-const webRoutes = require('./src/routes/web_routes');      
+const webRoutes = require('./src/routes/web_routes');     
+const roomSystem = require('./src/modules/room_system');
 
 // ============================
 //        CONFIGURAÇÕES
@@ -23,6 +24,9 @@ const publicDir = path.join(__dirname, 'public');
 
 // Serve arquivos estáticos da pasta 'public'
 app.use(express.static(publicDir));
+
+// Suporte a JSON no body para APIs (POST/PUT)
+app.use(express.json());
 
 // ============================
 //        ROTAS
@@ -48,6 +52,27 @@ app.get('/api/session-debug', (req, res) => {
   } catch (e) {
     console.error('failed to generate session debug', e);
     return res.status(500).json({ error: 'failed to generate session' });
+  }
+});
+
+// Rota simples para criar salas (usa Map em memória)
+app.post('/api/rooms', (req, res) => {
+  try {
+    const body = req.body || {};
+    const name = body.name;
+    const pass = body.pass || '';
+    const num = Number(body.num) || 1;
+    const ownerId = body.ownerId || null;
+
+    if (!name) return res.status(400).json({ error: 'name is required' });
+
+    const room = roomSystem.createRoom({ name, pass, num, ownerId });
+
+  // retornar ID e URL para que o cliente faça redirecionamento
+  return res.status(201).json({ room: room });
+  } catch (e) {
+    console.error('failed to create room', e);
+    return res.status(500).json({ error: 'failed to create room' });
   }
 });
 

@@ -4,12 +4,6 @@
  * ==============================================
  */
 const ContainerUtils = {
-    /**
-     * Abre um container aplicando classes CSS e configurando acessibilidade
-     * @param {HTMLElement} container - Elemento do container
-     * @param {HTMLElement} trigger - Elemento que dispara a ação (botão)
-     * @param {Object} options - Opções de configuração
-     */
     openContainer(container, trigger, options = {}) {
         const {
             containerClass = 'open',
@@ -34,12 +28,6 @@ const ContainerUtils = {
         if (tabIndex !== null) container.tabIndex = tabIndex;
     },
 
-    /**
-     * Fecha um container removendo classes CSS e configurando acessibilidade
-     * @param {HTMLElement} container - Elemento do container
-     * @param {HTMLElement} trigger - Elemento que dispara a ação (botão)
-     * @param {Object} options - Opções de configuração
-     */
     closeContainer(container, trigger, options = {}) {
         const {
             containerClass = 'open',
@@ -92,13 +80,6 @@ const ContainerUtils = {
         if (tabIndex !== null) container.tabIndex = tabIndex;
     },
 
-    /**
-     * Alterna estado de um container (aberto/fechado)
-     * @param {HTMLElement} container - Elemento do container
-     * @param {HTMLElement} trigger - Elemento que dispara a ação (botão)
-     * @param {Object} openOptions - Opções para abertura
-     * @param {Object} closeOptions - Opções para fechamento
-     */
     toggleContainer(container, trigger, openOptions = {}, closeOptions = {}) {
         const containerClass = openOptions.containerClass || 'open';
         const isOpen = container.classList.contains(containerClass);
@@ -112,12 +93,6 @@ const ContainerUtils = {
         return !isOpen;
     },
 
-    /**
-     * Configura acessibilidade inicial de um container
-     * @param {HTMLElement} container - Elemento do container
-     * @param {HTMLElement} trigger - Elemento que dispara a ação (botão)
-     * @param {Object} options - Opções de configuração
-     */
     setupAccessibility(container, trigger, options = {}) {
         const {
             containerId = container.id,
@@ -357,11 +332,6 @@ const ContainerUtils = {
 
     const MIN_LISTENERS = 1;
 
-    /**
-     * Adiciona classe de erro temporariamente a um elemento
-     * @param {HTMLElement} element - Elemento para adicionar erro
-     * @param {number} duration - Duração em ms (padrão: 1200)
-     */
     const showTemporaryError = (element, duration = 1200) => {
         if (!element) return;
         element.classList.add('input-error');
@@ -371,7 +341,7 @@ const ContainerUtils = {
     /**
      * Reseta o estado da interface após criar sala
      */
-    const resetToInitialState = () => {
+    const resetToInitialState = (message = 'Carregando...') => {
         // Usar utility para fechar container
         ContainerUtils.closeContainer(roomInputBox, joinBtn, {
             containerClass: 'expanded',
@@ -391,7 +361,7 @@ const ContainerUtils = {
         }
 
         createRoomBtn.disabled = true;
-        if (roomHelp) roomHelp.textContent = 'Carregando...';
+        if (roomHelp) roomHelp.textContent = message;
     };
 
     // --- Escolha de ouvintes
@@ -406,8 +376,8 @@ const ContainerUtils = {
         });
     });
 
-    // --- Criar sala
-    createRoomBtn?.addEventListener('click', () => {
+    // --- Criar sala (chama API e redireciona para a sala criada (dentro da mesma pagina))
+    createRoomBtn?.addEventListener('click', async () => {
         const name = document.getElementById('newRoomName')?.value.trim() || '';
         const pass = document.getElementById('newRoomPass')?.value || '';
         const selected = document.querySelector('.listener-choice[aria-pressed="true"]');
@@ -428,13 +398,22 @@ const ContainerUtils = {
             (selected || listenerChoices[0])?.focus();
             return;
         }
+        
+    // indicar carregamento na UI: fechar/ocultar o container e mostrar mensagem
+    resetToInitialState('Criando sala...');
 
-        console.log('[CreateRoom] Criar sala:', { name, pass, num });
+        try {
+            // Delegar a criação da sala ao módulo cliente (isolando lógica de rede)
+            const data = await window.ClientRoomSystem.createRoom({ name, pass, num });
 
-        // Reset da interface usando função auxiliar
-        resetToInitialState();
+            // atualizar UI: informar sucesso e manter o formulário oculto
+            if (roomHelp) roomHelp.textContent = 'Sala criada.';
 
-        // Exemplo de integração futura:
-        // await fetch('/api/rooms', { method: 'POST', body: JSON.stringify({ name, pass, num }) })
+        } catch (err) {
+            console.error('[CreateRoom] erro ao criar sala', err);
+            if (roomHelp) roomHelp.textContent = 'Erro ao criar sala';
+            showTemporaryError(createRoomBtn);
+            createRoomBtn.disabled = false;
+        }
     });
 })();

@@ -41,8 +41,8 @@
         updateSidebarSessionId(json.id);
       }
 
-      // imprimir apenas a resposta JSON 
-      console.log(json);
+      // imprimir apenas a resposta JSON e uma mensagem "Dados Usuario"
+      console.log('Dados Usuario:', json);
 
     } catch (err) {
       console.error('erro na sessão:', err);
