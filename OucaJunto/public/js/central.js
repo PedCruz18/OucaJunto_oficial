@@ -196,6 +196,7 @@ const ContainerUtils = {
     const roomInput = document.getElementById('roomCode');
     const expandedContent = document.getElementById('expandedContent');
     const roomHelp = document.getElementById('roomHelp');
+    const roomInputWrapper = document.querySelector('.room-input-wrapper');
 
     if (!joinBtn || !roomInputBox || !roomInput) {
         console.warn('[RoomJoin] Elementos não encontrados. Script abortado.');
@@ -225,6 +226,9 @@ const ContainerUtils = {
             triggerContent: '✕'
         });
 
+        // Adiciona classe no wrapper para compatibilidade com browsers antigos
+        roomInputWrapper?.classList.add('expanded-state');
+
         expandedContent?.setAttribute('aria-hidden', 'false');
 
         // Configurações específicas do input
@@ -245,6 +249,9 @@ const ContainerUtils = {
             triggerContent: '+'
         });
 
+        // Remove classe do wrapper para compatibilidade com browsers antigos
+        roomInputWrapper?.classList.remove('expanded-state');
+
         expandedContent?.setAttribute('aria-hidden', 'true');
 
         // Restaurar configurações do input
@@ -264,6 +271,9 @@ const ContainerUtils = {
             triggerContent: '+',
             display: 'none'
         });
+
+        // Remove classe do wrapper para compatibilidade com browsers antigos
+        roomInputWrapper?.classList.remove('expanded-state');
 
         joinBtn.disabled = true;
         expandedContent?.setAttribute('aria-hidden', 'true');

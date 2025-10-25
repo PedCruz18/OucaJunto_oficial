@@ -2,15 +2,16 @@
 .room-input-wrapper {
   position: absolute;  
   left: 50%;
-  bottom: 40%;            
-  transform: translateX(-50%);
+  top: 50%;            
+  transform: translate(-50%, -50%) translateY(20%);
   width: calc(100% - 48px);
   max-width: 560px; /* limita a largura máxima em telas grandes */
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  z-index: 3;            
+  z-index: 3;
+  transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 /* caixa que contém input + botão de ação */
@@ -22,8 +23,15 @@
   padding: 6px;
   align-items: center;
   overflow: hidden; /* para animações do conteúdo interno */
-  transition: padding 0.28s ease, background 0.28s ease, min-height 0.28s ease;
+  transition: 
+    padding 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    background 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    min-height 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    width 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    border-radius 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
   position: relative; /* para posicionar o botão absolutamente à direita */
+  transform-origin: center center;
 }
 
 /* estilo do input para digitar codigo */
@@ -66,7 +74,16 @@
   top: 50%;
   transform: translateY(-50%);
   z-index: 3;
-  transition: transform 0.2s ease, font-size 0.2s ease;
+  transition: 
+    transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    font-size 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    width 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    height 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    background 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    border 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    border-radius 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    right 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    top 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 /* texto auxiliar abaixo do input */
@@ -77,16 +94,34 @@
   letter-spacing: 1px;
   text-transform: uppercase;
   text-align: center;
+  transition: 
+    opacity 0.25s cubic-bezier(0.25, 0.8, 0.25, 1),
+    transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Comportamento do texto de ajuda quando expandido - usando :has() */
+.room-input-wrapper:has(.room-input-box.expanded) .room-help {
+  opacity: 0.4;
+  transform: translateY(-4px);
 }
 
 /* ===== Estado expandido: transforma a caixa em uma box maior ===== */
 .room-input-box.expanded {
+  /* mantém posicionamento relativo ao wrapper para animação conectada */
+  position: relative;
+  left: 0;
+  top: 0;
+  transform: none;
+  transform-origin: center;
+  width: 100%;
+
   padding: 20px;
   background: rgba(255,255,255,0.08);
   min-height: 260px; /* mais espaço vertical */
   align-items: flex-start;
   gap: 0;
   flex-direction: column;
+  border-radius: 16px; /* bordas ligeiramente maiores quando expandido */
 }
 
 .room-input-box.expanded .room-join-btn {
@@ -99,7 +134,6 @@
   border: 2px solid rgba(255,255,255,0.15);
   border-radius: 50%;
   transform: none;
-  transition: all 0.2s ease;
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
@@ -116,14 +150,17 @@
   max-height: 0;
   overflow: hidden;
   opacity: 0;
-  transition: max-height 0.32s ease, opacity 0.24s ease;
+  transition: 
+    max-height 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) 0.05s,
+    padding 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
   padding: 0;
 }
 
 .room-input-box.expanded .expanded-content {
   max-height: 280px;
   opacity: 1;
-  padding-top: 0;
+  padding-top: 12px;
 }
 
 .expanded-text {
@@ -278,6 +315,18 @@
     height: 36px; 
     font-size: 18px;
   }
+
+  /* Animações otimizadas para mobile */
+  .room-input-wrapper:has(.room-input-box.expanded),
+  .room-input-wrapper.expanded-state {
+    transform: translate(-50%, -50%) translateY(-5%);
+  }
+
+  .room-input-wrapper:has(.room-input-box.expanded) .room-image,
+  .room-input-wrapper.expanded-state .room-image {
+    transform: scale(0.75);
+    margin: 0 0 12px;
+  }
 }
 
 /* Esconde o placeholder visualmente quando o box estiver expandido (fallback) */
@@ -289,8 +338,37 @@
   max-width: 520px;     
   height: auto;         
   margin: 0 0 8px;     
-  align-self: center;   
+  align-self: center;
+  transition: 
+    transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    opacity 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    margin 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
 
+/* Comportamento do wrapper quando expandido - usando :has() para browsers modernos */
+.room-input-wrapper:has(.room-input-box.expanded) {
+  transform: translate(-50%, -50%) translateY(-10%);
+}
+
+/* Comportamento da logo quando o container está expandido - usando :has() */
+.room-input-wrapper:has(.room-input-box.expanded) .room-image {
+  transform: scale(0.85);
+  margin: 0 0 16px;
+}
+
+/* Fallback para browsers que não suportam :has() - usando classe auxiliar */
+.room-input-wrapper.expanded-state {
+  transform: translate(-50%, -50%) translateY(-10%);
+}
+
+.room-input-wrapper.expanded-state .room-image {
+  transform: scale(0.85);
+  margin: 0 0 16px;
+}
+
+.room-input-wrapper.expanded-state .room-help {
+  opacity: 0.4;
+  transform: translateY(-4px);
 }
 
 .site-footer {
