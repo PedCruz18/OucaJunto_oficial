@@ -4,7 +4,7 @@ const crypto = require('crypto');
 // Chave: id da sala (string), Valor: objeto da sala.
 const rooms = new Map();
 
-// Charset e tamanho do id da sala (curto para URLs simples)
+// Charset e tamanho do id da sala
 const CHARSET = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const ID_LEN = 8;
 
