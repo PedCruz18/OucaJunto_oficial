@@ -28,6 +28,9 @@
       <div class="panel">
         <div class="sidebar-content">
           <div class="connection-status" id="connection-status">SEM CONEXÃO</div>
+          <!-- Informações da sala atual (exibidas quando conectado) -->
+          <div class="sidebar-room-name" id="sidebarRoomName" style="display: none;">&nbsp;</div>
+          <div class="sidebar-room-genre" id="sidebarRoomGenre" style="display: none;">&nbsp;</div>
           <div class="session-id-display" id="sessionIdDisplay">PING: 0ms</div>
           <button class="leave-room-btn" id="leaveRoomBtn" aria-label="Desconectar" style="display: none;">Desconectar</button>
           <div class="session-footer">
@@ -62,17 +65,21 @@
                   </div>
 
                   <div class="form-field">
-                    <label class="form-label" for="newRoomGenre">Gênero Musical:</label>
+                    <label class="form-label" for="newRoomGenre">Gênero da sala:</label>
                     <select id="newRoomGenre" class="form-input" required>
-                      <option value="">Selecione um gênero</option>
-                      <option value="Rock">Rock</option>
-                      <option value="Pop">Pop</option>
-                      <option value="Jazz">Jazz</option>
-                      <option value="Eletrônica">Eletrônica</option>
-                      <option value="Hip-Hop">Hip-Hop</option>
-                      <option value="Clássica">Clássica</option>
-                      <option value="Sertanejo">Sertanejo</option>
-                      <option value="Outro">Outro</option>
+                      <option value="Papo Aleatório">🎙️ Papo Aleatório</option>
+                      <option value="Desabafos Anônimos">💭 Desabafos Anônimos</option>
+                      <option value="Fofocas Recentes">👀 Fofocas Recentes</option>
+                      <option value="Conversa Calma">🌿 Conversa Calma</option>
+                      <option value="Filosofia de Boteco">🍻 Filosofia de Boteco</option>
+                      <option value="Músicas e Sons Livres">🎵 Músicas e Sons Livres</option>
+                      <option value="Histórias da Madrugada">🌙 Histórias da Madrugada</option>
+                      <option value="Mistérios e Conspirações">🕵️‍♂️ Mistérios e Conspirações</option>
+                      <option value="Comédia e Risadas">😂 Comédia e Risadas</option>
+                      <option value="Vozes Desconhecidas">👤 Vozes Desconhecidas</option>
+                      <option value="Espiritual e Reflexivo">✨ Espiritual e Reflexivo</option>
+                      <option value="Gamers e Jogatinas">🎮 Gamers e Jogatinas</option>
+                      <option value="Reuniões e Projetos">📎 Reuniões e Projetos</option>
                     </select>
                   </div>
 

@@ -582,13 +582,34 @@ select.form-input:invalid {
   margin-top: 20px;
 }
 
+.sidebar-room-name {
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  margin-top: 6px;
+  text-align: center;
+}
+
+.sidebar-room-genre {
+  color: rgba(255,255,255,0.7);
+  font-weight: 600;
+  font-size: 12px;
+  margin-top: 2px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
 .leave-room-btn {
-  /* agora em fluxo normal abaixo do ping, centralizado */
-  position: relative;
+  /* posicionar o botão logo acima do rodapé da sidebar (acima do MEU ID)
+     usamos position:absolute para ficar sempre em relação ao container .sidebar-content */
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 64px; /* acima do session-footer (session-footer tem bottom:16px) */
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin: 10px auto 0;
   padding: 8px 12px;
   min-width: 120px;
   background: rgba(255,59,48,0.12);
@@ -599,6 +620,7 @@ select.form-input:invalid {
   font-weight: 700;
   cursor: pointer;
   transition: all 0.12s ease;
+  z-index: 12;
 }
 
 .leave-room-btn:hover {
@@ -664,7 +686,7 @@ select.form-input:invalid {
   }
   
   .leave-room-btn {
-    margin-top: 8px;
+    bottom: 64px;
     padding: 6px 10px;
     min-width: 110px;
     font-size: 13px;

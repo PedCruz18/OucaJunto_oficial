@@ -152,6 +152,34 @@ function setConnectionStatus(text) {
 if (typeof window !== 'undefined') window.setConnectionStatus = setConnectionStatus;
 
 /**
+ * Atualiza o nome e gênero da sala exibidos na sidebar.
+ * passar null para esconder.
+ */
+function setSidebarRoomInfo(room) {
+    try {
+        const nameEl = document.getElementById('sidebarRoomName');
+        const genreEl = document.getElementById('sidebarRoomGenre');
+        if (!nameEl || !genreEl) return;
+
+        if (room && (room.name || room.genre)) {
+            nameEl.textContent = room.name || '';
+            genreEl.textContent = room.genre || '';
+            nameEl.style.display = '';
+            genreEl.style.display = '';
+        } else {
+            nameEl.textContent = '';
+            genreEl.textContent = '';
+            nameEl.style.display = 'none';
+            genreEl.style.display = 'none';
+        }
+    } catch (e) {
+        // ignore
+    }
+}
+
+if (typeof window !== 'undefined') window.setSidebarRoomInfo = setSidebarRoomInfo;
+
+/**
  * ==============================================
  * 🧭 SIDEBAR TOGGLE (hamburger menu)
  * ==============================================
@@ -213,6 +241,8 @@ window.addEventListener('room:closed', (e) => {
     if (sessionDisp) sessionDisp.textContent = 'PING: 0ms';
     // reset status de conexão
     setConnectionStatus();
+    // limpar info da sala na sidebar
+    try { setSidebarRoomInfo(null); } catch (e) {}
     // Reset imediato do preview/confirm (garantir que o container de 'entrar' volte ao estado inicial)
     try {
         const previewNow = document.getElementById('roomPreviewContent');
@@ -545,6 +575,11 @@ window.addEventListener('room:closed', (e) => {
             window.ClientRoomSystem.startRoomPing(finalRoomId);
             // atualizar status de conexão na sidebar
             setConnectionStatus(`Conectado a ${finalRoomId}`);
+            // mostrar nome/gênero da sala na sidebar se disponível
+            try {
+                const roomState = data && data.state ? data.state : {};
+                setSidebarRoomInfo({ name: roomState.name || '', genre: roomState.genre || '' });
+            } catch (e) {}
         } catch (err) {
             console.error('[RoomJoin] falha ao entrar na sala confirmada', err);
             let msg = 'Erro ao entrar na sala';
@@ -755,6 +790,9 @@ window.addEventListener('room:closed', (e) => {
                 window.ClientRoomSystem.startRoomPing(roomId);
                 // atualizar status de conexão na sidebar
                 setConnectionStatus(`Conectado a ${roomId}`);
+                try {
+                    setSidebarRoomInfo({ name: data && data.room ? data.room.name : '', genre: data && data.room ? data.room.genre : '' });
+                } catch (e) { /* ignore */ }
             }
 
         } catch (err) {
@@ -788,6 +826,8 @@ window.addEventListener('room:closed', (e) => {
             if (window.ClientRoomSystem && typeof window.ClientRoomSystem.stopRoomPing === 'function') {
                 window.ClientRoomSystem.stopRoomPing();
             }
+            // limpar informações da sidebar imediatamente
+            try { setSidebarRoomInfo(null); } catch (e) {}
             
             // Disparar evento de sala fechada para resetar a UI completamente
             if (typeof window.CustomEvent === 'function') {
