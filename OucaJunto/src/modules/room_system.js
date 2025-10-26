@@ -15,7 +15,7 @@ function genId() {
 
 // funções de sala -------------------------------------------------------
 
-function createRoom({ name, pass = '', num = 1, ownerId = null } = {}) {
+function createRoom({ name, genre = '', num = 1, ownerId = null } = {}) {
 	if (!name) throw new Error('room name is required');
 
 	// garantir id único
@@ -27,7 +27,7 @@ function createRoom({ name, pass = '', num = 1, ownerId = null } = {}) {
 	const room = {
 		id,
 		name: String(name),
-		pass: pass == null ? '' : String(pass),
+		genre: genre == null ? '' : String(genre),
 		num: Number(num) || 1,
 		ownerId: ownerId || null,
 		players: [] // lista de jogadores/ouvintes (poderá ser populada depois)
@@ -43,7 +43,7 @@ function createRoom({ name, pass = '', num = 1, ownerId = null } = {}) {
 
 	rooms.set(id, room);
 	// log de backend mais detalhado: inclui id e quantidade de usuários (players.length)
-	console.log(`[room_system] createRoom id=${id} name="${room.name}" num=${room.num} owner=${room.ownerId} users=${room.players.length}`);
+	console.log(`[room_system] createRoom id=${id} name="${room.name}" genre="${room.genre}" num=${room.num} owner=${room.ownerId} users=${room.players.length}`);
 	return room;
 }
 
@@ -104,13 +104,10 @@ function isUserActive(roomId, userId, timeoutMs = 5000) {
 	return (Date.now() - ts) <= timeoutMs;
 }
 
-// valida se o join na sala é permitido (id e senha); retorna { ok: bool, reason?, room? }
-function validateJoin(id, pass) {
+// valida se o join na sala é permitido (id); retorna { ok: bool, reason?, room? }
+function validateJoin(id) {
 	const r = rooms.get(id);
 	if (!r) return { ok: false, reason: 'not_found' };
-
-	// verificar senha primeiro
-	if (r.pass && r.pass !== pass) return { ok: false, reason: 'bad_pass' };
 
 	// verificar capacidade usando usuários ativos (heartbeat)
 	try {
@@ -141,7 +138,7 @@ function getRoomState(id) {
 		name: r.name,
 		usersCount: usersCount,
 		maxUsers: r.num,
-		hasPassword: Boolean(r.pass),
+		genre: r.genre || '',
 		ownerId: r.ownerId
 	};
 }

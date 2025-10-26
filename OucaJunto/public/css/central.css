@@ -116,7 +116,6 @@
 
   padding: 20px;
   background: rgba(255,255,255,0.08);
-  min-height: 260px; /* mais espaço vertical */
   align-items: flex-start;
   gap: 0;
   flex-direction: column;
@@ -212,6 +211,26 @@
 .form-input::placeholder {
   color: rgba(255,255,255,0.35);
   font-size: 14px;
+}
+
+/* Estilos específicos para select */
+select.form-input {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='rgba(255,255,255,0.6)' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+}
+
+select.form-input option {
+  background: rgba(20,20,20,0.95);
+  color: #fff;
+  padding: 8px;
+}
+
+select.form-input:invalid {
+  color: rgba(255,255,255,0.35);
 }
 
 .form-row {
@@ -331,6 +350,151 @@
 /* Esconde o placeholder visualmente quando o box estiver expandido (fallback) */
 .room-input-box.expanded .room-input::placeholder { color: transparent; }
 
+/* ===== ROOM PREVIEW STYLES ===== */
+.room-preview-content {
+  width: 100%;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: 
+    max-height 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
+    opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) 0.05s,
+    padding 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+  padding: 0;
+}
+
+.room-input-box.room-preview .room-preview-content {
+  max-height: 200px;
+  opacity: 1;
+  padding-top: 12px;
+}
+
+.room-preview-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  align-items: center;
+  text-align: center;
+}
+
+.room-preview-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.room-title {
+  color: #fff;
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.room-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.room-name {
+  color: rgba(255,255,255,0.85);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+
+.room-genre {
+  color: rgba(255,255,255,0.65);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.room-enter-btn {
+  background: linear-gradient(135deg, #7b61ff 0%, #9b7bff 100%);
+  color: #fff;
+  border: none;
+  padding: 14px 32px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(123,97,255,0.35);
+  text-transform: uppercase;
+  min-width: 120px;
+}
+
+.room-enter-btn:hover {
+  box-shadow: 0 6px 20px rgba(123,97,255,0.5);
+  transform: translateY(-2px);
+}
+
+.room-enter-btn:active {
+  transform: translateY(0);
+}
+
+.room-enter-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 4px 16px rgba(123,97,255,0.25);
+}
+
+/* Estado especial quando em room preview */
+.room-input-box.room-preview {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(123,97,255,0.2);
+}
+
+.room-input-box.room-preview .room-input {
+  display: none;
+}
+
+/* Garantir que o conteúdo de criação de sala esteja oculto no preview */
+.room-input-box.room-preview .expanded-content {
+  display: none !important;
+  max-height: 0 !important;
+  opacity: 0 !important;
+}
+
+/* Mobile adjustments para room preview */
+@media (max-width: 480px) {
+  .room-preview-content {
+    padding: 0;
+  }
+  
+  .room-input-box.room-preview .room-preview-content {
+    max-height: 180px;
+    padding-top: 8px;
+  }
+  
+  .room-title {
+    font-size: 14px;
+  }
+  
+  .room-name {
+    font-size: 13px;
+  }
+  
+  .room-genre {
+    font-size: 11px;
+  }
+  
+  .room-enter-btn {
+    padding: 12px 24px;
+    font-size: 14px;
+  }
+}
+
 .room-image {
   display: block;
   width: 100%;        
@@ -418,6 +582,35 @@
   margin-top: 20px;
 }
 
+.leave-room-btn {
+  /* agora em fluxo normal abaixo do ping, centralizado */
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 10px auto 0;
+  padding: 8px 12px;
+  min-width: 120px;
+  background: rgba(255,59,48,0.12);
+  border: 1px solid rgba(255,59,48,0.22);
+  border-radius: 10px;
+  color: rgba(255,59,48,0.95);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.leave-room-btn:hover {
+  background: rgba(255,59,48,0.25);
+  border-color: rgba(255,59,48,0.5);
+  transform: scale(1.08);
+}
+
+.leave-room-btn:active {
+  transform: scale(0.95);
+}
+
 .session-id-display {
   color: #fff;
   font-size: 16px;
@@ -467,6 +660,13 @@
   }
   
   .connection-status {
+    font-size: 13px;
+  }
+  
+  .leave-room-btn {
+    margin-top: 8px;
+    padding: 6px 10px;
+    min-width: 110px;
     font-size: 13px;
   }
   

@@ -126,6 +126,32 @@ function showTemporaryError(element, duration = 1200) {
 if (typeof window !== 'undefined') window.showTemporaryError = showTemporaryError;
 
 /**
+ * Atualiza o texto de status de conexão na sidebar.
+ * Ex: 'Conectado a ABC123' ou reseta para 'SEM CONEXÃO' quando vazio.
+ */
+function setConnectionStatus(text) {
+    try {
+        const el = document.getElementById('connection-status');
+        const leaveBtn = document.getElementById('leaveRoomBtn');
+        if (!el) return;
+        el.textContent = text && String(text).length ? text : 'SEM CONEXÃO';
+        
+        // Mostrar botão de sair apenas se estiver conectado
+        if (leaveBtn) {
+            if (text && String(text).length && text !== 'SEM CONEXÃO') {
+                leaveBtn.style.display = 'inline-flex';
+            } else {
+                leaveBtn.style.display = 'none';
+            }
+        }
+    } catch (e) {
+        // ignore
+    }
+}
+
+if (typeof window !== 'undefined') window.setConnectionStatus = setConnectionStatus;
+
+/**
  * ==============================================
  * 🧭 SIDEBAR TOGGLE (hamburger menu)
  * ==============================================
@@ -183,8 +209,97 @@ window.addEventListener('room:closed', (e) => {
     const roomInput = document.getElementById('roomCode');
     const sessionDisp = document.getElementById('sessionIdDisplay');
 
-    if (roomHelp) roomHelp.textContent = 'Sala encerrada pelo criador';
+    if (roomHelp) roomHelp.textContent = 'Saindo..';
     if (sessionDisp) sessionDisp.textContent = 'PING: 0ms';
+    // reset status de conexão
+    setConnectionStatus();
+    // Reset imediato do preview/confirm (garantir que o container de 'entrar' volte ao estado inicial)
+    try {
+        const previewNow = document.getElementById('roomPreviewContent');
+        const expandedNow = document.getElementById('expandedContent');
+        const confirmNow = document.getElementById('confirmJoinBtn');
+
+        if (previewNow) {
+            previewNow.setAttribute('aria-hidden', 'true');
+            try { previewNow.style.display = 'none'; } catch (e) {}
+        }
+
+        if (confirmNow) {
+            // limpar dados do botão de confirmação
+            try { delete confirmNow.dataset.roomId; } catch (e) {}
+            confirmNow.disabled = false;
+            try { confirmNow.textContent = 'ENTRAR'; } catch (e) {}
+        }
+
+        if (expandedNow) {
+            // garantir que o conteúdo de criação fique oculto imediatamente
+            expandedNow.setAttribute('aria-hidden', 'true');
+            try { expandedNow.style.display = 'none'; } catch (e) {}
+        }
+
+        if (roomInputBox) roomInputBox.classList.remove('room-preview');
+    } catch (e) {
+        // ignore
+    }
+    // após alguns segundos, resetar o container de input como se o usuário tivesse acabado de entrar na página
+    try {
+        setTimeout(() => {
+            try {
+                const expanded = document.getElementById('expandedContent');
+                const preview = document.getElementById('roomPreviewContent');
+                // esconder preview e expanded
+                if (preview) {
+                    preview.setAttribute('aria-hidden', 'true');
+                    preview.style.display = 'none';
+                }
+                if (expanded) {
+                    expanded.setAttribute('aria-hidden', 'true');
+                    expanded.style.display = 'none';
+                }
+
+                // restaurar estado do input box
+                if (roomInputBox) roomInputBox.classList.remove('room-preview');
+                if (joinBtn) {
+                    joinBtn.textContent = '+';
+                    joinBtn.setAttribute('aria-expanded', 'false');
+                }
+                if (roomInput) {
+                    roomInput.value = '';
+                    roomInput.disabled = false;
+                    roomInput.removeAttribute('data-preview-id');
+                    // focar para facilitar nova entrada
+                    try { roomInput.focus(); } catch (e) {}
+                }
+
+                // restaurar mensagem de ajuda padrão
+                if (roomHelp) roomHelp.textContent = 'INSIRA UM CÓDIGO OU CRIE UMA SALA.';
+
+                // garantir que o wrapper esteja visível
+                if (roomInputWrapper) roomInputWrapper.style.display = '';
+                // garantir que a caixa de input esteja visível (pode ter sido escondida por outras rotinas)
+                if (roomInputBox) roomInputBox.style.display = 'flex';
+
+                // zerar display de ping (já foi feito) e garantir o sessionIdDisplay
+                if (sessionDisp) sessionDisp.textContent = 'PING: 0ms';
+
+                // reabilitar botão de criar sala caso estivesse desabilitado
+                try {
+                    const createBtn = document.getElementById('createRoomBtn');
+                    if (createBtn) {
+                        createBtn.disabled = false;
+                        createBtn.classList.remove('input-error');
+                    }
+                } catch (e) {
+                    // ignore
+                }
+
+            } catch (e) {
+                console.error('[room:closed] erro ao resetar UI', e);
+            }
+        }, 4000);
+    } catch (e) {
+        // não bloquear caso setTimeout falhe (muito improvável)
+    }
 
         // Parar ping caso esteja ativo
         if (window.ClientRoomSystem && typeof window.ClientRoomSystem.stopRoomPing === 'function') {
@@ -198,6 +313,17 @@ window.addEventListener('room:closed', (e) => {
             joinBtn.setAttribute('aria-label', 'Entrar na sala');
             joinBtn.removeAttribute('data-icon');
             joinBtn.classList.remove('input-error');
+        }
+
+        // Garantir que o botão de criar sala seja reabilitado ao fechar a sala
+        try {
+            const createBtn = document.getElementById('createRoomBtn');
+            if (createBtn) {
+                createBtn.disabled = false;
+                createBtn.classList.remove('input-error');
+            }
+        } catch (e) {
+            // ignore
         }
 
         if (roomInput) {
@@ -231,6 +357,8 @@ window.addEventListener('room:closed', (e) => {
     const expandedContent = document.getElementById('expandedContent');
     const roomHelp = document.getElementById('roomHelp');
     const roomInputWrapper = document.querySelector('.room-input-wrapper');
+    const roomPreviewContent = document.getElementById('roomPreviewContent');
+    const confirmJoinBtn = document.getElementById('confirmJoinBtn');
 
     if (!joinBtn || !roomInputBox || !roomInput) {
         console.warn('[RoomJoin] Elementos não encontrados. Script abortado.');
@@ -253,6 +381,9 @@ window.addEventListener('room:closed', (e) => {
 
     /** 🔓 Expande o campo de entrada */
     const openExpand = () => {
+        // Garantir que o container esteja visível (pode ter sido escondido por outras rotinas)
+        try { if (roomInputBox) roomInputBox.style.display = 'flex'; } catch (e) {}
+
         ContainerUtils.openContainer(roomInputBox, joinBtn, {
             containerClass: 'expanded',
             triggerClass: null, // Não usar classe no trigger
@@ -263,7 +394,12 @@ window.addEventListener('room:closed', (e) => {
         // Adiciona classe no wrapper para compatibilidade com browsers antigos
         roomInputWrapper?.classList.add('expanded-state');
 
-        expandedContent?.setAttribute('aria-hidden', 'false');
+    // Restaurar visibilidade do conteúdo expandido (pode ter sido marcado com display:none)
+    expandedContent?.setAttribute('aria-hidden', 'false');
+    try { if (expandedContent) expandedContent.style.display = ''; } catch (e) {}
+
+    // Garantir que o preview esteja oculto quando abrimos o formulário de criação
+    try { const rpc = document.getElementById('roomPreviewContent'); if (rpc) rpc.style.display = 'none'; } catch (e) {}
 
         // Configurações específicas do input
         roomInput.dataset._placeholder = roomInput.placeholder || '';
@@ -311,6 +447,7 @@ window.addEventListener('room:closed', (e) => {
 
         joinBtn.disabled = true;
         expandedContent?.setAttribute('aria-hidden', 'true');
+        roomPreviewContent?.setAttribute('aria-hidden', 'true');
 
         // Restaurar input para estado normal
         roomInput.disabled = false;
@@ -321,6 +458,110 @@ window.addEventListener('room:closed', (e) => {
         if (roomHelp) roomHelp.textContent = 'Carregando...';
     };
 
+    /** 🏠 Mostra preview da sala com informações e botão para entrar */
+    const showRoomPreview = (roomInfo, roomId) => {
+        // mostrar o container novamente
+        roomInputBox.style.display = 'flex';
+        roomInputBox.classList.add('expanded', 'room-preview');
+        roomInputWrapper?.classList.add('expanded-state');
+
+        // garantir que o conteúdo de criação de sala esteja completamente oculto
+        expandedContent?.setAttribute('aria-hidden', 'true');
+        if (expandedContent) {
+            expandedContent.style.display = 'none';
+        }
+        
+        // mostrar conteúdo de preview
+        roomPreviewContent?.setAttribute('aria-hidden', 'false');
+        if (roomPreviewContent) {
+            roomPreviewContent.style.display = 'block';
+        }
+
+        // preencher informações
+        const titleEl = document.getElementById('previewRoomTitle');
+        const nameEl = document.getElementById('previewRoomName');
+        const genreEl = document.getElementById('previewRoomGenre');
+        
+        if (titleEl) titleEl.textContent = `SALA ${roomId.toUpperCase()} ENCONTRADA!`;
+        if (nameEl) nameEl.textContent = `${roomInfo.name || 'SEM NOME'}`;
+        if (genreEl) genreEl.textContent = `${roomInfo.genre || 'SEM GÊNERO'}`;
+
+        // configurar botão de entrada
+        if (confirmJoinBtn) {
+            confirmJoinBtn.disabled = false;
+            confirmJoinBtn.dataset.roomId = roomId;
+        }
+
+        // configurar botão de fechar (X)
+        joinBtn.disabled = false;
+        joinBtn.innerHTML = '✕';
+        joinBtn.setAttribute('aria-label', 'Fechar preview');
+
+        if (roomHelp) roomHelp.textContent = `${roomInfo.usersCount}/${roomInfo.maxUsers} ouvintes`;
+    };
+
+    /** 🔒 Fecha o preview da sala e volta ao estado inicial */
+    const closePreview = () => {
+        roomInputBox.classList.remove('expanded', 'room-preview');
+        roomInputWrapper?.classList.remove('expanded-state');
+        
+        // ocultar preview e restaurar display do conteúdo de criação
+        roomPreviewContent?.setAttribute('aria-hidden', 'true');
+        if (roomPreviewContent) {
+            roomPreviewContent.style.display = 'none';
+        }
+        if (expandedContent) {
+            expandedContent.style.display = '';  // restaurar display original
+        }
+        
+        // restaurar botão e input
+        joinBtn.innerHTML = '+';
+        joinBtn.setAttribute('aria-label', 'Entrar na sala');
+        joinBtn.disabled = false;
+        
+        roomInput.value = '';
+        roomInput.disabled = false;
+        
+        if (roomHelp) roomHelp.textContent = 'INSIRA UM CÓDIGO OU CRIE UMA SALA.';
+    };
+
+    // Event listener para o botão de confirmação de entrada
+    confirmJoinBtn?.addEventListener('click', async () => {
+        const roomId = confirmJoinBtn.dataset.roomId;
+        if (!roomId) return;
+
+        confirmJoinBtn.disabled = true;
+        confirmJoinBtn.textContent = 'ENTRANDO';
+        
+        try {
+            const data = await window.ClientRoomSystem.joinRoom(roomId);
+            if (roomHelp) roomHelp.textContent = 'Conectado à sala.';
+            
+            // ocultar preview e mostrar estado conectado
+            roomInputBox.style.display = 'none';
+            
+            // iniciar ping para atualizar presença
+            const finalRoomId = data && data.state && data.state.id ? data.state.id : roomId;
+            window.ClientRoomSystem.startRoomPing(finalRoomId);
+            // atualizar status de conexão na sidebar
+            setConnectionStatus(`Conectado a ${finalRoomId}`);
+        } catch (err) {
+            console.error('[RoomJoin] falha ao entrar na sala confirmada', err);
+            let msg = 'Erro ao entrar na sala';
+            if (err && err.info) {
+                if (err.info.reason === 'not_found') msg = 'Sala não encontrada';
+                else if (err.info.reason === 'full') msg = 'Sala cheia';
+                else if (err.info.error) msg = String(err.info.error);
+            }
+            if (roomHelp) roomHelp.textContent = msg;
+            showTemporaryError(confirmJoinBtn);
+            
+            // restaurar botão
+            confirmJoinBtn.disabled = false;
+            confirmJoinBtn.textContent = 'ENTRAR';
+        }
+    });
+
     // --- Eventos principais
     joinBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -328,27 +569,27 @@ window.addEventListener('room:closed', (e) => {
         const value = roomInput.value.trim();
 
         if (roomInputBox.classList.contains('expanded')) {
-            closeExpand();
+            // se estiver em modo preview, fechar e voltar ao estado inicial
+            if (roomInputBox.classList.contains('room-preview')) {
+                closePreview();
+            } else {
+                closeExpand();
+            }
             return;
         }
 
         if (value) {
-            // tentar entrar na sala via API
+            // buscar informações da sala primeiro para mostrar preview
             showLoadingState();
             try {
-                const data = await window.ClientRoomSystem.joinRoom(value);
-                if (roomHelp) roomHelp.textContent = 'Conectado à sala.';
-                // iniciar ping para atualizar presença
-                const roomId = data && data.state && data.state.id ? data.state.id : value;
-                window.ClientRoomSystem.startRoomPing(roomId);
+                const roomInfo = await window.ClientRoomSystem.getRoomInfo(value);
+                showRoomPreview(roomInfo, value);
             } catch (err) {
-                console.error('[RoomJoin] falha ao entrar na sala', err);
+                console.error('[RoomJoin] falha ao buscar info da sala', err);
                 // Mensagens amigáveis com base no motivo retornado pela API
-                let msg = 'Erro ao entrar na sala';
+                let msg = 'Erro ao buscar sala';
                 if (err && err.info) {
                     if (err.info.reason === 'not_found') msg = 'Sala não encontrada';
-                    else if (err.info.reason === 'bad_pass') msg = 'Senha incorreta';
-                    else if (err.info.reason === 'full') msg = 'Sala cheia';
                     else if (err.info.error) msg = String(err.info.error);
                 }
                 if (roomHelp) roomHelp.textContent = msg;
@@ -387,17 +628,13 @@ window.addEventListener('room:closed', (e) => {
         if (value) {
             showLoadingState();
             try {
-                const data = await window.ClientRoomSystem.joinRoom(value);
-                if (roomHelp) roomHelp.textContent = 'Conectado à sala.';
-                const roomId = data && data.state && data.state.id ? data.state.id : value;
-                window.ClientRoomSystem.startRoomPing(roomId);
+                const roomInfo = await window.ClientRoomSystem.getRoomInfo(value);
+                showRoomPreview(roomInfo, value);
             } catch (err) {
-                console.error('[RoomJoin] falha ao entrar na sala', err);
-                let msg = 'Erro ao entrar na sala';
+                console.error('[RoomJoin] falha ao buscar info da sala', err);
+                let msg = 'Erro ao buscar sala';
                 if (err && err.info) {
                     if (err.info.reason === 'not_found') msg = 'Sala não encontrada';
-                    else if (err.info.reason === 'bad_pass') msg = 'Senha incorreta';
-                    else if (err.info.reason === 'full') msg = 'Sala cheia';
                     else if (err.info.error) msg = String(err.info.error);
                 }
                 if (roomHelp) roomHelp.textContent = msg;
@@ -475,13 +712,20 @@ window.addEventListener('room:closed', (e) => {
     // --- Criar sala (chama API e redireciona para a sala criada (dentro da mesma pagina))
     createRoomBtn?.addEventListener('click', async () => {
         const name = document.getElementById('newRoomName')?.value.trim() || '';
-        const pass = document.getElementById('newRoomPass')?.value || '';
+        const genre = document.getElementById('newRoomGenre')?.value || '';
         const selected = document.querySelector('.listener-choice[aria-pressed="true"]');
         const num = selected ? Number(selected.dataset.value) : null;
 
         // Validações
         if (!name) {
             const field = document.getElementById('newRoomName');
+            showTemporaryError(field);
+            field?.focus();
+            return;
+        }
+
+        if (!genre) {
+            const field = document.getElementById('newRoomGenre');
             showTemporaryError(field);
             field?.focus();
             return;
@@ -500,7 +744,7 @@ window.addEventListener('room:closed', (e) => {
 
         try {
             // Delegar a criação da sala ao módulo cliente (isolando lógica de rede)
-            const data = await window.ClientRoomSystem.createRoom({ name, pass, num });
+            const data = await window.ClientRoomSystem.createRoom({ name, genre, num });
 
             // atualizar UI: informar sucesso e manter o formulário oculto
             if (roomHelp) roomHelp.textContent = 'Sala criada.';
@@ -509,6 +753,8 @@ window.addEventListener('room:closed', (e) => {
             const roomId = data && data.room && data.room.id ? data.room.id : null;
             if (roomId) {
                 window.ClientRoomSystem.startRoomPing(roomId);
+                // atualizar status de conexão na sidebar
+                setConnectionStatus(`Conectado a ${roomId}`);
             }
 
         } catch (err) {
@@ -516,6 +762,39 @@ window.addEventListener('room:closed', (e) => {
             if (roomHelp) roomHelp.textContent = 'Erro ao criar sala';
             showTemporaryError(createRoomBtn);
             createRoomBtn.disabled = false;
+        }
+    });
+})();
+
+
+/**
+ * ==============================================
+ * 🚪 BOTÃO DE SAIR DA SALA
+ * ==============================================
+ */
+(() => {
+    const leaveRoomBtn = document.getElementById('leaveRoomBtn');
+    
+    if (!leaveRoomBtn) {
+        console.warn('[LeaveRoom] Botão não encontrado.');
+        return;
+    }
+
+    leaveRoomBtn.addEventListener('click', () => {
+        try {
+            console.log('[LeaveRoom] Usuário saiu da sala manualmente');
+            
+            // Parar ping
+            if (window.ClientRoomSystem && typeof window.ClientRoomSystem.stopRoomPing === 'function') {
+                window.ClientRoomSystem.stopRoomPing();
+            }
+            
+            // Disparar evento de sala fechada para resetar a UI completamente
+            if (typeof window.CustomEvent === 'function') {
+                window.dispatchEvent(new CustomEvent('room:closed', { detail: { roomId: null, manual: true } }));
+            }
+        } catch (err) {
+            console.error('[LeaveRoom] Erro ao sair da sala', err);
         }
     });
 })();

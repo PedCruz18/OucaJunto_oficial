@@ -60,13 +60,13 @@ app.post('/api/rooms', (req, res) => {
   try {
     const body = req.body || {};
     const name = body.name;
-    const pass = body.pass || '';
+    const genre = body.genre || '';
     const num = Number(body.num) || 1;
     const ownerId = body.ownerId || null;
 
     if (!name) return res.status(400).json({ error: 'name is required' });
 
-    const room = roomSystem.createRoom({ name, pass, num, ownerId });
+    const room = roomSystem.createRoom({ name, genre, num, ownerId });
 
   // retornar ID e URL para que o cliente faça redirecionamento
   return res.status(201).json({ room: room });
@@ -82,13 +82,12 @@ app.post('/api/rooms/:id/join', (req, res) => {
     const roomId = req.params.id;
     const body = req.body || {};
     const userId = body.userId || req.get('X-Ouca-Session-Id') || null;
-    const pass = body.pass || '';
 
     if (!roomId) return res.status(400).json({ error: 'room id is required' });
     if (!userId) return res.status(400).json({ error: 'user id is required' });
 
-    // valida join
-    const v = roomSystem.validateJoin(roomId, pass);
+    // valida join (sem senha agora)
+    const v = roomSystem.validateJoin(roomId);
     if (!v.ok) return res.status(400).json({ error: 'join_not_allowed', reason: v.reason });
 
     // adicionar player ao registro histórico
@@ -104,6 +103,31 @@ app.post('/api/rooms/:id/join', (req, res) => {
   } catch (e) {
     console.error('failed to join room', e);
     return res.status(500).json({ error: 'failed to join room' });
+  }
+});
+
+// Rota para obter informações básicas da sala (sem fazer join)
+app.get('/api/rooms/:id/info', (req, res) => {
+  try {
+    const roomId = req.params.id;
+    if (!roomId) return res.status(400).json({ error: 'room id is required' });
+
+    const room = roomSystem.getRoom(roomId);
+    if (!room) return res.status(404).json({ error: 'room not found' });
+
+    const activeUsers = roomSystem.getActiveUsersCount ? roomSystem.getActiveUsersCount(roomId) : 0;
+    
+    // retornar informações básicas da sala para preview
+    return res.json({
+      id: room.id,
+      name: room.name,
+      usersCount: activeUsers,
+      maxUsers: room.num,
+      genre: room.genre || ''
+    });
+  } catch (e) {
+    console.error('failed to get room info', e);
+    return res.status(500).json({ error: 'failed to get room info' });
   }
 });
 

@@ -3,9 +3,9 @@
     // Variável global para controlar ping ativo
     let currentRoomPing = null;
 
-    async function createRoom({ name, pass = '', num = 1 } = {}) {
+    async function createRoom({ name, genre = '', num = 1 } = {}) {
 
-        console.log('[CreateRoom] Criando sala.. (requisitando API no backend):', { name, pass, num });
+        console.log('[CreateRoom] Criando sala.. (requisitando API no backend):', { name, genre, num });
 
         if (!name) throw new Error('name is required');
 
@@ -24,7 +24,7 @@
         const resp = await fetch('/api/rooms', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, pass, num, ownerId })
+            body: JSON.stringify({ name, genre, num, ownerId })
         });
 
         if (!resp.ok) {
@@ -45,6 +45,21 @@
         }
 
         return data;
+    }
+
+    async function getRoomInfo(roomId) {
+        if (!roomId) throw new Error('roomId is required');
+
+        const resp = await fetch(`/api/rooms/${roomId}/info`);
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            const e = new Error('failed to get room info');
+            e.info = err;
+            e.status = resp.status;
+            throw e;
+        }
+
+        return resp.json();
     }
 
     async function getRoomState(roomId) {
@@ -75,7 +90,7 @@
         return resp.json();
     }
 
-        async function joinRoom(roomId, pass = '') {
+        async function joinRoom(roomId) {
             if (!roomId) throw new Error('roomId is required');
 
             // tentar ler ownerId da sessão já presente no localStorage
@@ -95,7 +110,7 @@
             const resp = await fetch(`/api/rooms/${roomId}/join`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: ownerId, pass })
+                body: JSON.stringify({ userId: ownerId })
             });
 
             if (!resp.ok) {
@@ -175,6 +190,7 @@
 
     global.ClientRoomSystem = {
         createRoom,
+        getRoomInfo,
         getRoomState,
         startRoomPing,
         stopRoomPing,

@@ -27,8 +27,9 @@
     <div class="sidebar" id="sidebar" role="navigation">
       <div class="panel">
         <div class="sidebar-content">
-          <div class="connection-status">SEM CONEXÃO</div>
+          <div class="connection-status" id="connection-status">SEM CONEXÃO</div>
           <div class="session-id-display" id="sessionIdDisplay">PING: 0ms</div>
+          <button class="leave-room-btn" id="leaveRoomBtn" aria-label="Desconectar" style="display: none;">Desconectar</button>
           <div class="session-footer">
             <span class="session-label">MEU ID: </span>
             <span class="session-id-text" id="sessionIdText">121312313123</span>
@@ -61,8 +62,18 @@
                   </div>
 
                   <div class="form-field">
-                    <label class="form-label" for="newRoomPass">Senha:</label>
-                    <input id="newRoomPass" class="form-input" type="password" placeholder="Opcional">
+                    <label class="form-label" for="newRoomGenre">Gênero Musical:</label>
+                    <select id="newRoomGenre" class="form-input" required>
+                      <option value="">Selecione um gênero</option>
+                      <option value="Rock">Rock</option>
+                      <option value="Pop">Pop</option>
+                      <option value="Jazz">Jazz</option>
+                      <option value="Eletrônica">Eletrônica</option>
+                      <option value="Hip-Hop">Hip-Hop</option>
+                      <option value="Clássica">Clássica</option>
+                      <option value="Sertanejo">Sertanejo</option>
+                      <option value="Outro">Outro</option>
+                    </select>
                   </div>
 
                   <div class="form-row listeners-row">
@@ -82,6 +93,20 @@
                   </div>
                   
                 </form>
+              </div>
+            </div>
+
+            <!-- Preview da sala quando usuário digita código válido -->
+            <div class="room-preview-content" id="roomPreviewContent" aria-hidden="true">
+              <div class="room-preview-info">
+                <div class="room-preview-header">
+                  <h3 class="room-title" id="previewRoomTitle">SALA XXXX ENCONTRADA!</h3>
+                  <div class="room-details">
+                    <div class="room-name" id="previewRoomName">(NOME DA SALA)</div>
+                    <div class="room-genre" id="previewRoomGenre">(GÊNERO DA SALA)</div>
+                  </div>
+                </div>
+                <button id="confirmJoinBtn" class="room-enter-btn" type="button">ENTRAR</button>
               </div>
             </div>
           </div>
