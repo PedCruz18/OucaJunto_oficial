@@ -76,6 +76,67 @@ app.post('/api/rooms', (req, res) => {
   }
 });
 
+// Rota para um usuário entrar em uma sala pelo id
+app.post('/api/rooms/:id/join', (req, res) => {
+  try {
+    const roomId = req.params.id;
+    const body = req.body || {};
+    const userId = body.userId || req.get('X-Ouca-Session-Id') || null;
+    const pass = body.pass || '';
+
+    if (!roomId) return res.status(400).json({ error: 'room id is required' });
+    if (!userId) return res.status(400).json({ error: 'user id is required' });
+
+    // valida join
+    const v = roomSystem.validateJoin(roomId, pass);
+    if (!v.ok) return res.status(400).json({ error: 'join_not_allowed', reason: v.reason });
+
+    // adicionar player ao registro histórico
+    const added = roomSystem.addPlayer ? roomSystem.addPlayer(roomId, userId) : false;
+
+    // marcar presença imediatamente
+    if (roomSystem._touchPresence) roomSystem._touchPresence(roomId, userId);
+
+    console.log(`[api/rooms/join] user=${userId} joined room=${roomId} added=${added}`);
+
+    const state = roomSystem.getRoomState(roomId);
+    return res.json({ ok: true, added, state });
+  } catch (e) {
+    console.error('failed to join room', e);
+    return res.status(500).json({ error: 'failed to join room' });
+  }
+});
+
+// Rota para consultar estado da sala (ping/status check)
+app.get('/api/rooms/:id/state', (req, res) => {
+  try {
+    const roomId = req.params.id;
+    if (!roomId) return res.status(400).json({ error: 'room id is required' });
+
+    // aceitar ownerId via query ou header para atualizar presença
+    const ownerId = req.query.ownerId || req.get('X-Ouca-Session-Id') || null;
+
+    // se fornecido ownerId, marcar presença no room_system
+    if (ownerId) {
+      try {
+        if (typeof roomSystem._touchPresence === 'function') {
+          roomSystem._touchPresence(roomId, ownerId);
+        }
+      } catch (e) {
+        console.error('[room-state] failed to touch presence', e);
+      }
+    }
+
+    const state = roomSystem.getRoomState(roomId);
+    if (!state) return res.status(404).json({ error: 'room not found' });
+
+    return res.json({ state });
+  } catch (e) {
+    console.error('failed to get room state', e);
+    return res.status(500).json({ error: 'failed to get room state' });
+  }
+});
+
 // Rotas do site (exporta publicDir para servir arquivos estáticos)
 app.use('/', webRoutes(publicDir));
 
@@ -94,4 +155,79 @@ app.listen(PORT, HOST, () => {
       }
     }
   });
+
+  // Monitor periódico de salas: lista e resume as rooms a cada 5 segundos (apenas para debug)
+  // Map para rastrear quando uma sala foi observada pela primeira vez com 0 usuários
+  const zeroSince = new Map();
+
+  setInterval(() => {
+    try {
+      const rooms = roomSystem.listRooms();
+
+      if (!rooms || rooms.length === 0) {
+        console.log('[room-monitor] 0 rooms');
+        return;
+      }
+
+  // Log resumo curto usando usuários ativos (heartbeat)
+  const summary = rooms.map(r => `${r.id}(users=${roomSystem.getActiveUsersCount ? roomSystem.getActiveUsersCount(r.id) : (Array.isArray(r.players) ? r.players.length : 0)})`).join(', ');
+      console.log(`[room-monitor] ${rooms.length} room(s): ${summary}`);
+
+      // Checagem por sala: log detalhado e remoção de salas vazias que persistirem >5s
+      const now = Date.now();
+      const ZERO_TIMEOUT = 5000; // ms
+
+      rooms.forEach(r => {
+  // checar se o owner existe e se saiu — se saiu, encerrar a sala imediatamente
+  try {
+    if (r.ownerId && typeof roomSystem.isUserActive === 'function') {
+      const ownerActive = roomSystem.isUserActive(r.id, r.ownerId);
+      if (!ownerActive) {
+        const removed = roomSystem.deleteRoom(r.id);
+        console.log(`[room-monitor] room ${r.id} removed because owner ${r.ownerId} left removed=${removed}`);
+        // garantir que qualquer marcação em zeroSince seja removida
+        if (zeroSince.has(r.id)) zeroSince.delete(r.id);
+        return; // seguir para próxima sala
+      }
+    }
+  } catch (err) {
+    console.error('[room-monitor] owner presence check failed', err);
+  }
+
+  const users = roomSystem.getActiveUsersCount ? roomSystem.getActiveUsersCount(r.id) : (Array.isArray(r.players) ? r.players.length : 0);
+
+        if (users === 0) {
+          if (!zeroSince.has(r.id)) {
+            // primeira vez que vemos 0 usuários, marcar timestamp
+            zeroSince.set(r.id, now);
+            console.log(`[room-monitor] room ${r.id} became empty at ${new Date(now).toISOString()}`);
+          } else {
+            const t0 = zeroSince.get(r.id);
+            if (now - t0 >= ZERO_TIMEOUT) {
+              // Excedeu timeout: deletar sala
+              const removed = roomSystem.deleteRoom(r.id);
+              console.log(`[room-monitor] room ${r.id} removed due to inactivity (users=0 for >=${ZERO_TIMEOUT}ms) removed=${removed}`);
+              zeroSince.delete(r.id);
+            }
+          }
+        } else {
+          // se a sala tem usuários agora, limpar qualquer marcação anterior
+          if (zeroSince.has(r.id)) {
+            zeroSince.delete(r.id);
+            console.log(`[room-monitor] room ${r.id} is no longer empty; cleared zeroSince mark`);
+          }
+        }
+      });
+
+      // Também limpar entradas em zeroSince que não existem mais (por segurança)
+      for (const id of Array.from(zeroSince.keys())) {
+        if (!rooms.find(rr => rr.id === id)) {
+          zeroSince.delete(id);
+        }
+      }
+
+    } catch (err) {
+      console.error('[room-monitor] failed to list rooms', err);
+    }
+  }, 5000);
 });

@@ -113,6 +113,19 @@ const ContainerUtils = {
 };
 
 /**
+ * Função utilitária global para destacar temporariamente um elemento com erro
+ * Uso: showTemporaryError(element, durationMs)
+ */
+function showTemporaryError(element, duration = 1200) {
+    if (!element) return;
+    element.classList.add('input-error');
+    setTimeout(() => element.classList.remove('input-error'), duration);
+}
+
+// Expõe para outros módulos/escopos que possam esperar encontrá-la globalmente
+if (typeof window !== 'undefined') window.showTemporaryError = showTemporaryError;
+
+/**
  * ==============================================
  * 🧭 SIDEBAR TOGGLE (hamburger menu)
  * ==============================================
@@ -158,6 +171,52 @@ const ContainerUtils = {
         toggleSidebar();
     });
 })();
+
+// Listener global: quando o servidor/monitor remover a sala, atualizamos a UI
+window.addEventListener('room:closed', (e) => {
+    try {
+        const roomId = e && e.detail && e.detail.roomId ? e.detail.roomId : null;
+    const roomHelp = document.getElementById('roomHelp');
+    const joinBtn = document.getElementById('joinBtn');
+    const roomInputBox = document.querySelector('.room-input-box');
+    const roomInputWrapper = document.querySelector('.room-input-wrapper');
+    const roomInput = document.getElementById('roomCode');
+    const sessionDisp = document.getElementById('sessionIdDisplay');
+
+    if (roomHelp) roomHelp.textContent = 'Sala encerrada pelo criador';
+    if (sessionDisp) sessionDisp.textContent = 'PING: 0ms';
+
+        // Parar ping caso esteja ativo
+        if (window.ClientRoomSystem && typeof window.ClientRoomSystem.stopRoomPing === 'function') {
+            try { window.ClientRoomSystem.stopRoomPing(); } catch (err) { /* ignore */ }
+        }
+
+        // Reset visual do botão/input
+        if (joinBtn) {
+            joinBtn.disabled = false;
+            joinBtn.innerHTML = '+';
+            joinBtn.setAttribute('aria-label', 'Entrar na sala');
+            joinBtn.removeAttribute('data-icon');
+            joinBtn.classList.remove('input-error');
+        }
+
+        if (roomInput) {
+            roomInput.value = '';
+            roomInput.disabled = false;
+            roomInput.removeAttribute('aria-disabled');
+        }
+
+        if (roomInputBox) {
+            roomInputBox.classList.remove('expanded');
+        }
+        if (roomInputWrapper) {
+            roomInputWrapper.classList.remove('expanded-state');
+        }
+
+    } catch (err) {
+        console.error('[UI] failed to handle room:closed event', err);
+    }
+});
 
 
 /**
@@ -263,7 +322,7 @@ const ContainerUtils = {
     };
 
     // --- Eventos principais
-    joinBtn.addEventListener('click', (e) => {
+    joinBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
 
         const value = roomInput.value.trim();
@@ -274,8 +333,28 @@ const ContainerUtils = {
         }
 
         if (value) {
+            // tentar entrar na sala via API
             showLoadingState();
-            console.log('[RoomJoin] Conectar à sala:', value);
+            try {
+                const data = await window.ClientRoomSystem.joinRoom(value);
+                if (roomHelp) roomHelp.textContent = 'Conectado à sala.';
+                // iniciar ping para atualizar presença
+                const roomId = data && data.state && data.state.id ? data.state.id : value;
+                window.ClientRoomSystem.startRoomPing(roomId);
+            } catch (err) {
+                console.error('[RoomJoin] falha ao entrar na sala', err);
+                // Mensagens amigáveis com base no motivo retornado pela API
+                let msg = 'Erro ao entrar na sala';
+                if (err && err.info) {
+                    if (err.info.reason === 'not_found') msg = 'Sala não encontrada';
+                    else if (err.info.reason === 'bad_pass') msg = 'Senha incorreta';
+                    else if (err.info.reason === 'full') msg = 'Sala cheia';
+                    else if (err.info.error) msg = String(err.info.error);
+                }
+                if (roomHelp) roomHelp.textContent = msg;
+                showTemporaryError(joinBtn);
+                joinBtn.disabled = false;
+            }
         } else {
             openExpand();
         }
@@ -297,7 +376,7 @@ const ContainerUtils = {
     });
 
     // --- Enter = Conectar / expandir
-    roomInput.addEventListener('keydown', (e) => {
+    roomInput.addEventListener('keydown', async (e) => {
         if (e.key !== 'Enter') return;
         e.preventDefault();
 
@@ -307,7 +386,24 @@ const ContainerUtils = {
 
         if (value) {
             showLoadingState();
-            console.log('[RoomJoin] Enter: conectar à sala', value);
+            try {
+                const data = await window.ClientRoomSystem.joinRoom(value);
+                if (roomHelp) roomHelp.textContent = 'Conectado à sala.';
+                const roomId = data && data.state && data.state.id ? data.state.id : value;
+                window.ClientRoomSystem.startRoomPing(roomId);
+            } catch (err) {
+                console.error('[RoomJoin] falha ao entrar na sala', err);
+                let msg = 'Erro ao entrar na sala';
+                if (err && err.info) {
+                    if (err.info.reason === 'not_found') msg = 'Sala não encontrada';
+                    else if (err.info.reason === 'bad_pass') msg = 'Senha incorreta';
+                    else if (err.info.reason === 'full') msg = 'Sala cheia';
+                    else if (err.info.error) msg = String(err.info.error);
+                }
+                if (roomHelp) roomHelp.textContent = msg;
+                showTemporaryError(joinBtn);
+                joinBtn.disabled = false;
+            }
         } else {
             openExpand();
         }
@@ -398,7 +494,7 @@ const ContainerUtils = {
             (selected || listenerChoices[0])?.focus();
             return;
         }
-        
+
     // indicar carregamento na UI: fechar/ocultar o container e mostrar mensagem
     resetToInitialState('Criando sala...');
 
@@ -408,6 +504,12 @@ const ContainerUtils = {
 
             // atualizar UI: informar sucesso e manter o formulário oculto
             if (roomHelp) roomHelp.textContent = 'Sala criada.';
+
+            // Iniciar ping automático para a sala recém-criada
+            const roomId = data && data.room && data.room.id ? data.room.id : null;
+            if (roomId) {
+                window.ClientRoomSystem.startRoomPing(roomId);
+            }
 
         } catch (err) {
             console.error('[CreateRoom] erro ao criar sala', err);
