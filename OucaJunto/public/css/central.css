@@ -324,7 +324,6 @@ select.form-input:invalid {
   .listeners-options { gap: 6px; flex-wrap: wrap; }
   .listener-choice { padding: 8px 12px; font-size: 14px; min-width: 48px; }
   .expanded-create-btn { padding: 10px 18px; font-size: 13px; width: 100%; margin-top: 4px; }
-  .room-input-box.expanded { min-height: 300px; }
   .room-input-box.expanded .expanded-content { max-height: 320px; }
   .room-input-box.expanded .room-join-btn { 
     top: -10px; 
@@ -600,6 +599,42 @@ select.form-input:invalid {
   letter-spacing: 0.6px;
 }
 
+/* Estado inicial: alguns elementos da sidebar começam ocultos no HTML via inline styles
+   movidos para CSS para manter separação de concerns */
+#sidebarRoomName,
+#sidebarRoomGenre {
+  display: none;
+}
+
+/* Lista de usuários na sidebar */
+.room-users-container {
+  display: none; /* inicialmente oculto until connected */
+  width: 100%;
+  margin-top: 8px;
+}
+.room-users-container .room-users-header {
+  font-size: 11px;
+  color: rgba(255,255,255,0.7);
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+#roomUsersList {
+  list-style: none;
+  padding: 8px 0 0;
+  margin: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Botão de sair começa oculto até conectar */
+#leaveRoomBtn {
+  display: none;
+}
+
 .leave-room-btn {
   /* posicionar o botão logo acima do rodapé da sidebar (acima do MEU ID)
      usamos position:absolute para ficar sempre em relação ao container .sidebar-content */
@@ -695,6 +730,25 @@ select.form-input:invalid {
   .session-id-display {
     font-size: 15px;
     padding: 10px 14px;
+  }
+
+  /* ===== User list in sidebar ===== */
+  .room-users-container {
+    width: 100%;
+    margin-top: 8px;
+  }
+  .room-users-container .room-users-header {
+    display: block;
+  }
+  #roomUsersList li button.remove-user-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    font-size: 13px;
+  }
+  #roomUsersList li button.remove-user-btn:hover {
+    color: #ff6b6b;
   }
   
   .session-id-text {

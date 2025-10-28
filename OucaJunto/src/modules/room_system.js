@@ -49,7 +49,6 @@ function createRoom({ name, genre = '', num = 1, ownerId = null } = {}) {
 
 function getRoom(id) {
 	const r = rooms.get(id) || null;
-	console.log(`[room_system] getRoom id=${id} found=${!!r}`);
 	return r;
 }
 
@@ -83,7 +82,9 @@ function _touchPresence(roomId, userId) {
 }
 
 // retorna a contagem de usuários ativos na sala (com base em presença/heartbeat)
-function getActiveUsersCount(roomId, timeoutMs = 5000) {
+// NOTE: aumentamos o timeout padrão para 8000ms para evitar 'flicker' quando
+// clientes fazem heartbeat em intervalos próximos ao limite.
+function getActiveUsersCount(roomId, timeoutMs = 8000) {
 	const m = presence.get(roomId);
 	if (!m) return 0;
 	const now = Date.now();
@@ -95,7 +96,7 @@ function getActiveUsersCount(roomId, timeoutMs = 5000) {
 }
 
 // verifica se um usuário específico está ativo (presença recente)
-function isUserActive(roomId, userId, timeoutMs = 5000) {
+function isUserActive(roomId, userId, timeoutMs = 8000) {
 	if (!roomId || !userId) return false;
 	const m = presence.get(roomId);
 	if (!m) return false;
@@ -157,6 +158,41 @@ function addPlayer(roomId, userId) {
 	return false;
 }
 
+// remove um jogador do registro histórico e da presença (se existir)
+function removePlayer(roomId, userId) {
+	if (!roomId || !userId) return false;
+	const r = rooms.get(roomId);
+	if (!r) return false;
+	const sid = String(userId);
+	if (Array.isArray(r.players)) {
+		const idx = r.players.indexOf(sid);
+		if (idx !== -1) r.players.splice(idx, 1);
+	}
+
+	// remover presença também
+	try {
+		const m = presence.get(roomId);
+		if (m && m.has(sid)) m.delete(sid);
+	} catch (e) {
+		// ignore
+	}
+
+	console.log(`[room_system] removePlayer room=${roomId} user=${sid}`);
+	return true;
+}
+
+// retorna lista de usuários ativos (ids) na sala com base em presença
+function getActiveUsersList(roomId, timeoutMs = 8000) {
+	const m = presence.get(roomId);
+	if (!m) return [];
+	const now = Date.now();
+	const out = [];
+	for (const [uid, lastSeen] of m.entries()) {
+		if (now - lastSeen <= timeoutMs) out.push(uid);
+	}
+	return out;
+}
+
 module.exports = {
 	createRoom,
 	getRoom,
@@ -168,5 +204,7 @@ module.exports = {
 	_touchPresence,
 	getActiveUsersCount,
 	isUserActive,
-	addPlayer
+	addPlayer,
+	removePlayer,
+	getActiveUsersList
 };

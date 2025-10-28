@@ -66,6 +66,15 @@ const ContainerUtils = {
             // console.debug('ContainerUtils: foco fallback falhou', err);
         }
 
+        // Depuração específica: se estivermos fechando o container de usuários,
+        // registrar tentativa para ajudar a diagnosticar who/what fechou.
+        try {
+            if (container && container.id === 'roomUsersContainer') {
+                console.debug('[RoomUsers] ContainerUtils.closeContainer: tentando fechar #roomUsersContainer', { containerId: container.id });
+                container.dataset.attemptedClose = new Date().toISOString();
+            }
+        } catch (e) {}
+
         container.classList.remove(containerClass);
         container.setAttribute('aria-hidden', 'true');
 
@@ -164,8 +173,9 @@ function setSidebarRoomInfo(room) {
         if (room && (room.name || room.genre)) {
             nameEl.textContent = room.name || '';
             genreEl.textContent = room.genre || '';
-            nameEl.style.display = '';
-            genreEl.style.display = '';
+            // usar display explícito para sobrescrever o CSS que pode esconder esses elementos
+            nameEl.style.display = 'block';
+            genreEl.style.display = 'block';
         } else {
             nameEl.textContent = '';
             genreEl.textContent = '';
@@ -226,6 +236,224 @@ if (typeof window !== 'undefined') window.setSidebarRoomInfo = setSidebarRoomInf
     });
 })();
 
+
+/**
+ * ==============================================
+ * 👥 UI: Lista de usuários conectados à sala (sidebar)
+ * - Busca /api/rooms/:id/players
+ * - Exibe lista e permite que o owner remova usuários
+ * ==============================================
+ */
+(function () {
+    let roomUsersInterval = null;
+    let currentRoomForUsers = null;
+
+    function getSessionIdFromStorage() {
+        try {
+            const stored = localStorage.getItem('oucaSession');
+            if (!stored) return null;
+            const s = JSON.parse(stored);
+            return s && s.id ? s.id : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function updateRoomUsersUI(roomId) {
+        if (!roomId) return;
+        try {
+            const resp = await fetch(`/api/rooms/${encodeURIComponent(roomId)}/players`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            renderRoomUsers(data, roomId);
+        } catch (e) {
+            console.error('[RoomUsers] failed to update users UI', e);
+        }
+    }
+
+    function renderRoomUsers(data, roomId) {
+        const container = document.getElementById('roomUsersContainer');
+        const list = document.getElementById('roomUsersList');
+        if (!container || !list) return;
+
+        // limpar lista
+        list.innerHTML = '';
+
+        // Marca de depuração: quando a renderização começa
+        try {
+            container.dataset.lastRenderStart = new Date().toISOString();
+        } catch (e) {}
+
+        const active = (data && Array.isArray(data.activeUsers)) ? data.activeUsers : [];
+        const registered = (data && Array.isArray(data.registeredPlayers)) ? data.registeredPlayers : [];
+        const ownerId = data && data.ownerId ? String(data.ownerId) : null;
+
+        // combinar: preferir mostrar usuários ativos; se vazio, mostrar registrados
+        const displayList = active.length ? active : registered;
+
+        if (!displayList || displayList.length === 0) {
+            try {
+                container.dataset.visible = 'false';
+                container.dataset.displayedCount = '0';
+                container.dataset.ownerId = ownerId || '';
+                container.dataset.lastUpdate = new Date().toISOString();
+            } catch (e) {}
+            console.debug('[RoomUsers] render: hiding container (no users to show)', { roomId, ownerId, activeCount: active.length, registeredCount: registered.length });
+            container.style.display = 'none';
+            return;
+        }
+
+        // Mostrar container e anotar estados para depuração
+        try {
+            // usar 'block' explicitamente para sobrescrever a regra CSS que
+            // define .room-users-container { display: none; }
+            container.style.display = 'block';
+            container.dataset.visible = 'true';
+            container.dataset.displayedCount = String(displayList.length);
+            container.dataset.activeCount = String(active.length);
+            container.dataset.registeredCount = String(registered.length);
+            container.dataset.ownerId = ownerId || '';
+            container.dataset.lastUpdate = new Date().toISOString();
+        } catch (e) {}
+
+        console.debug('[RoomUsers] render: updating list', { roomId, ownerId, active, registered, displayList });
+
+        const myId = getSessionIdFromStorage();
+        const amOwner = myId && ownerId && String(myId) === String(ownerId);
+
+        displayList.forEach(uid => {
+            const li = document.createElement('li');
+            li.style.display = 'flex';
+            li.style.alignItems = 'center';
+            li.style.justifyContent = 'space-between';
+            li.style.gap = '8px';
+            li.style.padding = '6px 8px';
+            li.style.borderRadius = '8px';
+            li.style.background = 'rgba(255,255,255,0.02)';
+
+            const span = document.createElement('span');
+            span.textContent = String(uid);
+            span.style.fontSize = '13px';
+            span.style.color = 'rgba(255,255,255,0.9)';
+
+            li.appendChild(span);
+
+            // não permitir que o owner remova a si mesmo
+            if (amOwner && String(uid) !== String(ownerId)) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'remove-user-btn';
+                btn.setAttribute('aria-label', `Remover usuário ${uid}`);
+                btn.dataset.userId = uid;
+                btn.style.border = 'none';
+                btn.style.background = 'transparent';
+                btn.style.color = 'rgba(255,255,255,0.85)';
+                btn.style.cursor = 'pointer';
+                btn.style.fontWeight = '700';
+                btn.textContent = '✕';
+                li.appendChild(btn);
+            }
+
+            list.appendChild(li);
+        });
+
+        // final da renderização
+        try {
+            container.dataset.lastRenderEnd = new Date().toISOString();
+        } catch (e) {}
+    }
+
+    function startRoomUsersUpdater(roomId) {
+        stopRoomUsersUpdater();
+        if (!roomId) return;
+        currentRoomForUsers = roomId;
+        // atualizar imediatamente e depois a cada 5s
+        updateRoomUsersUI(roomId);
+    roomUsersInterval = setInterval(() => updateRoomUsersUI(roomId), 3000);
+        try {
+            const container = document.getElementById('roomUsersContainer');
+            if (container) {
+                container.dataset.updaterStartedAt = new Date().toISOString();
+                container.dataset.updaterForRoom = roomId;
+                console.debug('[RoomUsers] updater started', { roomId });
+            }
+        } catch (e) {}
+    }
+
+    function stopRoomUsersUpdater() {
+        if (roomUsersInterval) {
+            clearInterval(roomUsersInterval);
+            roomUsersInterval = null;
+        }
+        currentRoomForUsers = null;
+        const container = document.getElementById('roomUsersContainer');
+        const list = document.getElementById('roomUsersList');
+        if (list) list.innerHTML = '';
+        try {
+            if (container) {
+                container.style.display = 'none';
+                container.dataset.visible = 'false';
+                container.dataset.updaterStoppedAt = new Date().toISOString();
+                console.debug('[RoomUsers] updater stopped');
+            }
+        } catch (e) {}
+    }
+
+    // delegação para clique em remover usuário
+    document.addEventListener('click', async (ev) => {
+        const t = ev.target;
+        if (!t) return;
+        const btn = t.closest && t.closest('.remove-user-btn');
+        if (!btn) return;
+        ev.preventDefault();
+
+        const uid = btn.dataset.userId;
+        const roomId = currentRoomForUsers;
+        if (!uid || !roomId) return;
+
+        // enviar pedido ao backend para remover o usuário
+        try {
+            const ownerId = getSessionIdFromStorage();
+            console.debug('[RoomUsers] remove-user request', { roomId, uid, ownerId });
+            const resp = await fetch(`/api/rooms/${encodeURIComponent(roomId)}/remove-user`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Ouca-Session-Id': ownerId || '' },
+                body: JSON.stringify({ userId: uid })
+            });
+
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                console.error('[RoomUsers] failed to remove user', err);
+                try { const container = document.getElementById('roomUsersContainer'); if (container) container.dataset.lastRemoveError = JSON.stringify(err); } catch (e) {}
+                return;
+            }
+
+            const data = await resp.json();
+            console.debug('[RoomUsers] remove-user success', { roomId, removedUser: uid, returnedActive: data.activeUsers });
+            try { const container = document.getElementById('roomUsersContainer'); if (container) container.dataset.lastRemove = JSON.stringify({ user: uid, at: new Date().toISOString() }); } catch (e) {}
+            // Atualizar UI com nova lista
+            renderRoomUsers({ ownerId: getSessionIdFromStorage(), activeUsers: data.activeUsers, registeredPlayers: [] }, roomId);
+        } catch (e) {
+            console.error('[RoomUsers] erro ao remover usuário', e);
+            try { const container = document.getElementById('roomUsersContainer'); if (container) container.dataset.lastRemoveError = String(e); } catch (er) {}
+        }
+    });
+
+    // expor para o escopo global para controle por outros módulos
+    if (typeof window !== 'undefined') {
+        window.startRoomUsersUpdater = startRoomUsersUpdater;
+        window.stopRoomUsersUpdater = stopRoomUsersUpdater;
+    }
+
+    // Garantir limpeza quando o usuário sair manualmente
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            // opcional: não parar automaticamente, apenas manter
+        }
+    });
+
+})();
+
 // Listener global: quando o servidor/monitor remover a sala, atualizamos a UI
 window.addEventListener('room:closed', (e) => {
     try {
@@ -243,6 +471,17 @@ window.addEventListener('room:closed', (e) => {
     setConnectionStatus();
     // limpar info da sala na sidebar
     try { setSidebarRoomInfo(null); } catch (e) {}
+    // esconder container de usuários imediatamente
+    try {
+        const usersContainer = document.getElementById('roomUsersContainer');
+        if (usersContainer) {
+            console.debug('[RoomUsers] room:closed handler: tentando fechar usersContainer (room:closed)', { detail: e && e.detail });
+            try { usersContainer.dataset.attemptedCloseOnRoomClosed = new Date().toISOString(); } catch (er) {}
+            usersContainer.style.display = 'none';
+        }
+        const usersList = document.getElementById('roomUsersList');
+        if (usersList) usersList.innerHTML = '';
+    } catch (e) {}
     // Reset imediato do preview/confirm (garantir que o container de 'entrar' volte ao estado inicial)
     try {
         const previewNow = document.getElementById('roomPreviewContent');
@@ -335,6 +574,9 @@ window.addEventListener('room:closed', (e) => {
         if (window.ClientRoomSystem && typeof window.ClientRoomSystem.stopRoomPing === 'function') {
             try { window.ClientRoomSystem.stopRoomPing(); } catch (err) { /* ignore */ }
         }
+
+        // Parar updater de usuários também (se houver)
+        try { if (typeof window.stopRoomUsersUpdater === 'function') window.stopRoomUsersUpdater(); } catch (e) { /* ignore */ }
 
         // Reset visual do botão/input
         if (joinBtn) {
@@ -573,6 +815,7 @@ window.addEventListener('room:closed', (e) => {
             // iniciar ping para atualizar presença
             const finalRoomId = data && data.state && data.state.id ? data.state.id : roomId;
             window.ClientRoomSystem.startRoomPing(finalRoomId);
+            try { if (typeof window.startRoomUsersUpdater === 'function') window.startRoomUsersUpdater(finalRoomId); } catch (e) { /* ignore */ }
             // atualizar status de conexão na sidebar
             setConnectionStatus(`Conectado a ${finalRoomId}`);
             // mostrar nome/gênero da sala na sidebar se disponível
@@ -788,6 +1031,7 @@ window.addEventListener('room:closed', (e) => {
             const roomId = data && data.room && data.room.id ? data.room.id : null;
             if (roomId) {
                 window.ClientRoomSystem.startRoomPing(roomId);
+                try { if (typeof window.startRoomUsersUpdater === 'function') window.startRoomUsersUpdater(roomId); } catch (e) { /* ignore */ }
                 // atualizar status de conexão na sidebar
                 setConnectionStatus(`Conectado a ${roomId}`);
                 try {

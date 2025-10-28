@@ -29,10 +29,15 @@
         <div class="sidebar-content">
           <div class="connection-status" id="connection-status">SEM CONEXÃO</div>
           <!-- Informações da sala atual (exibidas quando conectado) -->
-          <div class="sidebar-room-name" id="sidebarRoomName" style="display: none;">&nbsp;</div>
-          <div class="sidebar-room-genre" id="sidebarRoomGenre" style="display: none;">&nbsp;</div>
+          <div class="sidebar-room-name" id="sidebarRoomName">&nbsp;</div>
+          <div class="sidebar-room-genre" id="sidebarRoomGenre">&nbsp;</div>
           <div class="session-id-display" id="sessionIdDisplay">PING: 0ms</div>
-          <button class="leave-room-btn" id="leaveRoomBtn" aria-label="Desconectar" style="display: none;">Desconectar</button>
+          <!-- Lista de usuários conectados à sala (aparece quando houver uma sala ativa) -->
+          <div class="room-users-container" id="roomUsersContainer">
+            <div class="room-users-header">Usuários</div>
+            <ul id="roomUsersList"></ul>
+          </div>
+          <button class="leave-room-btn" id="leaveRoomBtn" aria-label="Desconectar">Desconectar</button>
           <div class="session-footer">
             <span class="session-label">MEU ID: </span>
             <span class="session-id-text" id="sessionIdText">121312313123</span>

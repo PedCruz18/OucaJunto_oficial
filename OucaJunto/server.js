@@ -140,11 +140,20 @@ app.get('/api/rooms/:id/state', (req, res) => {
     // aceitar ownerId via query ou header para atualizar presença
     const ownerId = req.query.ownerId || req.get('X-Ouca-Session-Id') || null;
 
-    // se fornecido ownerId, marcar presença no room_system
+    // se fornecido ownerId, marcar presença apenas se o id pertencer à sala
     if (ownerId) {
       try {
-        if (typeof roomSystem._touchPresence === 'function') {
-          roomSystem._touchPresence(roomId, ownerId);
+        const room = roomSystem.getRoom(roomId);
+        // só tocar presença se o id for o owner da sala ou estiver registrado nos players
+        const ownerMatches = room && room.ownerId && String(room.ownerId) === String(ownerId);
+        const registered = room && Array.isArray(room.players) && room.players.includes(String(ownerId));
+        if (ownerMatches || registered) {
+          if (typeof roomSystem._touchPresence === 'function') {
+            roomSystem._touchPresence(roomId, ownerId);
+          }
+        } else {
+          // Ignorar touchPresence para ids não registrados (por exemplo, usuários removidos/kicked)
+          // console.debug(`[room-state] ignored touchPresence for ${ownerId} in room ${roomId}`);
         }
       } catch (e) {
         console.error('[room-state] failed to touch presence', e);
@@ -154,10 +163,72 @@ app.get('/api/rooms/:id/state', (req, res) => {
     const state = roomSystem.getRoomState(roomId);
     if (!state) return res.status(404).json({ error: 'room not found' });
 
-    return res.json({ state });
+    // adicionar flag indicando se o usuário solicitante pertence à sala
+    let userBelongsToRoom = false;
+    if (ownerId) {
+      try {
+        const room = roomSystem.getRoom(roomId);
+        const ownerMatches = room && room.ownerId && String(room.ownerId) === String(ownerId);
+        const registered = room && Array.isArray(room.players) && room.players.includes(String(ownerId));
+        userBelongsToRoom = ownerMatches || registered;
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    return res.json({ state, userBelongsToRoom });
   } catch (e) {
     console.error('failed to get room state', e);
     return res.status(500).json({ error: 'failed to get room state' });
+  }
+});
+
+// Rota para listar usuários ativos/registrados de uma sala
+app.get('/api/rooms/:id/players', (req, res) => {
+  try {
+    const roomId = req.params.id;
+    if (!roomId) return res.status(400).json({ error: 'room id is required' });
+
+    const room = roomSystem.getRoom(roomId);
+    if (!room) return res.status(404).json({ error: 'room not found' });
+
+    // lista de usuários ativos (com base em presença/heartbeat)
+    const active = typeof roomSystem.getActiveUsersList === 'function' ? roomSystem.getActiveUsersList(roomId) : [];
+
+    return res.json({ ownerId: room.ownerId || null, activeUsers: active, registeredPlayers: Array.isArray(room.players) ? room.players : [] });
+  } catch (e) {
+    console.error('failed to get room players', e);
+    return res.status(500).json({ error: 'failed to get room players' });
+  }
+});
+
+// Rota para remover um usuário da sala (apenas o dono pode fazer)
+app.post('/api/rooms/:id/remove-user', (req, res) => {
+  try {
+    const roomId = req.params.id;
+    const body = req.body || {};
+    const targetUser = body.userId || req.query.userId;
+
+    // ownerId enviado via header X-Ouca-Session-Id ou no body
+    const ownerId = req.get('X-Ouca-Session-Id') || body.ownerId || null;
+
+    if (!roomId) return res.status(400).json({ error: 'room id is required' });
+    if (!targetUser) return res.status(400).json({ error: 'user id is required' });
+    if (!ownerId) return res.status(400).json({ error: 'owner id is required' });
+
+    const room = roomSystem.getRoom(roomId);
+    if (!room) return res.status(404).json({ error: 'room not found' });
+
+    if (String(room.ownerId) !== String(ownerId)) return res.status(403).json({ error: 'forbidden', reason: 'not_owner' });
+
+    const removed = typeof roomSystem.removePlayer === 'function' ? roomSystem.removePlayer(roomId, targetUser) : false;
+
+    const active = typeof roomSystem.getActiveUsersList === 'function' ? roomSystem.getActiveUsersList(roomId) : [];
+
+    return res.json({ ok: true, removed, activeUsers: active });
+  } catch (e) {
+    console.error('failed to remove user from room', e);
+    return res.status(500).json({ error: 'failed to remove user' });
   }
 });
 

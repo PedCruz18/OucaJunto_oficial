@@ -143,6 +143,23 @@
                     const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
                     const latency = Math.max(0, Math.round(t1 - t0));
                     const state = response.state;
+                    
+                    // verificar se o usuário foi removido da sala
+                    if (response.userBelongsToRoom === false) {
+                        console.log(`[RoomPing] Usuário foi removido da sala ${roomId}. Forçando desconexão.`);
+                        // Parar ping imediatamente
+                        stopRoomPing();
+                        // Disparar evento de sala fechada para resetar UI
+                        try {
+                            if (typeof window !== 'undefined' && typeof window.CustomEvent === 'function') {
+                                window.dispatchEvent(new CustomEvent('room:closed', { detail: { roomId, kicked: true } }));
+                            }
+                        } catch (e) {
+                            console.error('[RoomPing] failed to dispatch room:closed event', e);
+                        }
+                        return; // sair do loop
+                    }
+                    
                     console.log(`[RoomPing] Estado da sala ${roomId}: users=${state.usersCount}/${state.maxUsers} name="${state.name}" latency=${latency}ms`);
 
                     // atualizar indicador de ping na UI se existir
@@ -177,7 +194,7 @@
                     stopRoomPing();
                 }
             }
-        }, 5000);
+    }, 3000);
     }
 
     function stopRoomPing() {
