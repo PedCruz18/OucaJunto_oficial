@@ -658,15 +658,6 @@ select.form-input:invalid {
   z-index: 12;
 }
 
-.leave-room-btn:hover {
-  background: rgba(255,59,48,0.25);
-  border-color: rgba(255,59,48,0.5);
-  transform: scale(1.08);
-}
-
-.leave-room-btn:active {
-  transform: scale(0.95);
-}
 
 .session-id-display {
   color: #fff;
@@ -737,9 +728,7 @@ select.form-input:invalid {
     width: 100%;
     margin-top: 8px;
   }
-  .room-users-container .room-users-header {
-    display: block;
-  }
+
   #roomUsersList li button.remove-user-btn {
     background: transparent;
     border: none;

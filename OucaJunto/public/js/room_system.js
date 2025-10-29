@@ -149,6 +149,80 @@
                         console.log(`[RoomPing] Usuário foi removido da sala ${roomId}. Forçando desconexão.`);
                         // Parar ping imediatamente
                         stopRoomPing();
+
+                        // Tentativa imediata de esconder o container de usuários no cliente
+                        // (redundância visual caso outros handlers não atuem rápido o suficiente)
+                        try {
+                            if (typeof window !== 'undefined') {
+                                // Tentar parar o updater (se exposto globalmente)
+                                try {
+                                    if (typeof window.stopRoomUsersUpdater === 'function') {
+                                        console.log('[RoomPing] Chamando window.stopRoomUsersUpdater() (se existir).');
+                                        window.stopRoomUsersUpdater();
+                                    } else {
+                                        console.log('[RoomPing] window.stopRoomUsersUpdater não é função ou não existe (tipo:', typeof window.stopRoomUsersUpdater, ').');
+                                    }
+                                } catch (e) {
+                                    console.error('[RoomPing] Erro ao chamar stopRoomUsersUpdater:', e);
+                                }
+
+                                // Informações detalhadas do DOM antes da tentativa de ocultar
+                                try {
+                                    console.log(`[RoomPing] Tentando ocultar container de usuários da sala ${roomId} (disparo por remoção).`);
+                                    const container = document.getElementById('roomUsersContainer');
+                                    const list = document.getElementById('roomUsersList');
+                                    console.log('[RoomPing] Elementos encontrados -> container:', container, ', list:', list);
+
+                                    if (list) {
+                                        try {
+                                            console.log('[RoomPing] roomUsersList.innerHTML length antes:', list.innerHTML ? list.innerHTML.length : 0);
+                                            list.innerHTML = '';
+                                            console.log('[RoomPing] roomUsersList.innerHTML limpo.');
+                                        } catch (er) {
+                                            console.error('[RoomPing] Erro ao limpar roomUsersList.innerHTML:', er);
+                                        }
+                                    }
+
+                                    if (container) {
+                                        try {
+                                            const beforeInline = container.style && container.style.display !== undefined ? container.style.display : '(no inline)';
+                                            const beforeComputed = (window.getComputedStyle ? window.getComputedStyle(container).display : 'unknown');
+                                            console.log('[RoomPing] container.display antes -> inline:', beforeInline, ', computed:', beforeComputed);
+                                        } catch (er) {
+                                            console.warn('[RoomPing] Falha ao ler styles do container antes:', er);
+                                        }
+
+                                        try {
+                                            container.style.display = 'none';
+                                            console.log('[RoomPing] container.style.display setado = "none" (inline).');
+                                        } catch (er) {
+                                            console.error('[RoomPing] Erro ao setar container.style.display = none', er);
+                                        }
+
+                                        try {
+                                            const afterComputed = (window.getComputedStyle ? window.getComputedStyle(container).display : 'unknown');
+                                            console.log('[RoomPing] container.display depois -> inline:', container.style.display, ', computed:', afterComputed);
+                                        } catch (er) {
+                                            console.warn('[RoomPing] Falha ao ler styles do container depois:', er);
+                                        }
+
+                                        try {
+                                            container.dataset.visible = 'false';
+                                            console.log('[RoomPing] container.dataset.visible setado para "false".');
+                                        } catch (er) {
+                                            console.error('[RoomPing] Erro ao setar container.dataset.visible:', er);
+                                        }
+                                    } else {
+                                        console.warn('[RoomPing] roomUsersContainer não encontrado no DOM.');
+                                    }
+                                } catch (er) {
+                                    console.error('[RoomPing] Erro geral ao tentar ocultar container:', er);
+                                }
+                            }
+                        } catch (e) {
+                            console.error('[RoomPing] Erro inesperado no bloco de ocultação:', e);
+                        }
+
                         // Disparar evento de sala fechada para resetar UI
                         try {
                             if (typeof window !== 'undefined' && typeof window.CustomEvent === 'function') {
@@ -157,6 +231,7 @@
                         } catch (e) {
                             console.error('[RoomPing] failed to dispatch room:closed event', e);
                         }
+
                         return; // sair do loop
                     }
                     
