@@ -2,13 +2,13 @@
 // `public/js/containers.js` para separar responsabilidades.
 // Certifique-se de carregar esse arquivo antes de `central.js`.
 if (typeof window !== 'undefined' && !window.ContainerUtils) {
-    console.warn('[central.js] ContainerUtils não encontrado. Carregue `public/js/containers.js` antes de `central.js`.');
+    // ContainerUtils missing — UI may behave degraded if not loaded before central.js
 }
 // A lógica da sidebar (lista de usuários, updater e tratamento de eventos como
 // 'room:closed') foi movida para `public/js/sidebar.js`.
 // Certifique-se de carregar `sidebar.js` antes de `central.js`.
 if (typeof window !== 'undefined' && !window.startRoomUsersUpdater) {
-    console.warn('[central.js] Lógica da sidebar não encontrada. Carregue `/js/sidebar.js` antes de `central.js`.');
+    // Sidebar logic missing — room users updater may not be available
 }
 
 /**

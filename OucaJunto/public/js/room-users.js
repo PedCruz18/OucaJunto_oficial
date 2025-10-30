@@ -32,7 +32,7 @@
 
             renderRoomUsers(data, roomId);
         } catch (e) {
-            console.error('[RoomUsers] failed to update users UI', e);
+            // failed to update users UI
         }
     }
 
@@ -65,7 +65,6 @@
         if (displayList.length === 0) {
             container.style.display = 'none';
             container.dataset.visible = 'false';
-            console.debug('[RoomUsers] render: no users to show', { roomId, ownerId, activeCount: active.length, registeredCount: registered.length });
             return;
         }
 
@@ -73,7 +72,7 @@
         container.style.display = 'block';
         container.dataset.visible = 'true';
 
-        console.debug('[RoomUsers] render: updating list', { roomId, ownerId, active, registered, displayList });
+    // render: updating list
 
         const myId = getSessionIdFromStorage();
         const amOwner = myId && ownerId && String(myId) === String(ownerId);
@@ -131,7 +130,6 @@
             if (container) {
                 container.dataset.updaterStartedAt = new Date().toISOString();
                 container.dataset.updaterForRoom = roomId;
-                console.debug('[RoomUsers] updater started', { roomId });
             }
         } catch (e) {}
     }
@@ -151,7 +149,6 @@
                 container.style.display = 'none';
                 container.dataset.visible = 'false';
                 container.dataset.updaterStoppedAt = new Date().toISOString();
-                console.debug('[RoomUsers] updater stopped');
             }
         } catch (e) {}
     }
@@ -171,7 +168,6 @@
         // enviar pedido ao backend para remover o usuário
         try {
             const ownerId = getSessionIdFromStorage();
-            console.debug('[RoomUsers] remove-user request', { roomId, uid, ownerId });
             const resp = await fetch(`/api/rooms/${encodeURIComponent(roomId)}/remove-user`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-Ouca-Session-Id': ownerId || '' },
@@ -180,18 +176,15 @@
 
             if (!resp.ok) {
                 const err = await resp.json().catch(() => ({}));
-                console.error('[RoomUsers] failed to remove user', err);
                 try { const container = document.getElementById('roomUsersContainer'); if (container) container.dataset.lastRemoveError = JSON.stringify(err); } catch (e) {}
                 return;
             }
 
             const data = await resp.json();
-            console.debug('[RoomUsers] remove-user success', { roomId, removedUser: uid, returnedActive: data.activeUsers });
             try { const container = document.getElementById('roomUsersContainer'); if (container) container.dataset.lastRemove = JSON.stringify({ user: uid, at: new Date().toISOString() }); } catch (e) {}
             // Atualizar UI com nova lista
             renderRoomUsers({ ownerId: getSessionIdFromStorage(), activeUsers: data.activeUsers, registeredPlayers: [] }, roomId);
         } catch (e) {
-            console.error('[RoomUsers] erro ao remover usuário', e);
             try { const container = document.getElementById('roomUsersContainer'); if (container) container.dataset.lastRemoveError = String(e); } catch (er) {}
         }
     });
@@ -219,41 +212,28 @@
         if (typeof window === 'undefined') return;
         window.addEventListener('room:closed', (e) => {
             try {
-                console.debug('[RoomUsers] room:closed event received', { detail: e && e.detail ? e.detail : null });
+                // room:closed event received
 
                 if (typeof window.stopRoomUsersUpdater === 'function') {
                     // chamar o stopper (ele já faz logs), mas também colocar um log contextual aqui
                     try {
                         window.stopRoomUsersUpdater();
-                        console.debug('[RoomUsers] stopRoomUsersUpdater invoked due to room:closed');
                     } catch (err) {
-                        console.error('[RoomUsers] error while calling stopRoomUsersUpdater', err);
+                        // ignore
                     }
                 } else {
                     // fallback: esconder container manualmente e logar a ação
                     const container = document.getElementById('roomUsersContainer');
                     const list = document.getElementById('roomUsersList');
 
-                    if (list) {
-                        try { list.innerHTML = ''; } catch (err) { console.error('[RoomUsers] failed to clear list', err); }
-                    }
+                        if (list) {
+                            try { list.innerHTML = ''; } catch (err) { /* ignore */ }
+                        }
 
-                    if (container) {
-                        const prevVisible = container.dataset && container.dataset.visible ? container.dataset.visible : null;
-                        const roomId = container.dataset && container.dataset.updaterForRoom ? container.dataset.updaterForRoom : null;
-                        const ownerId = container.dataset && container.dataset.ownerId ? container.dataset.ownerId : null;
-
-                        try { container.style.display = 'none'; } catch (err) { console.error('[RoomUsers] failed to set container.style.display', err); }
-                        try { container.dataset.visible = 'false'; } catch (err) { /* ignore */ }
-
-                        console.debug('[RoomUsers] container hidden (fallback) due to room:closed', {
-                            roomId,
-                            ownerId,
-                            previousVisible: prevVisible
-                        });
-                    } else {
-                        console.debug('[RoomUsers] room:closed handler: no container element found to hide');
-                    }
+                        if (container) {
+                            try { container.style.display = 'none'; } catch (err) { /* ignore */ }
+                            try { container.dataset.visible = 'false'; } catch (err) { /* ignore */ }
+                        }
                 }
             } catch (err) {
                 // não propagar erro do handler

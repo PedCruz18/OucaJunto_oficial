@@ -157,8 +157,6 @@
                                 // Tentar parar o updater (se exposto globalmente)
                                 try {
                                     if (typeof window.stopRoomUsersUpdater === 'function') {
-                                        console.log('[RoomPing] Chamando window.stopRoomUsersUpdater() (se existir).');
-                                        window.stopRoomUsersUpdater();
                                     } else {
                                         console.log('[RoomPing] window.stopRoomUsersUpdater não é função ou não existe (tipo:', typeof window.stopRoomUsersUpdater, ').');
                                     }
@@ -168,10 +166,8 @@
 
                                 // Informações detalhadas do DOM antes da tentativa de ocultar
                                 try {
-                                    console.log(`[RoomPing] Tentando ocultar container de usuários da sala ${roomId} (disparo por remoção).`);
                                     const container = document.getElementById('roomUsersContainer');
                                     const list = document.getElementById('roomUsersList');
-                                    console.log('[RoomPing] Elementos encontrados -> container:', container, ', list:', list);
 
                                     if (list) {
                                         try {
